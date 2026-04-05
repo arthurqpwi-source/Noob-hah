@@ -1,4 +1,5 @@
--- Noob prime v19.0 - Roube, Viagem Empoeirada, MM2 & 99 Noites
+-- Noob prime v22.0 - Design Premium + 4 Scripts
+local TweenService = game:GetService("TweenService")
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
@@ -7,106 +8,140 @@ local Container = Instance.new("ScrollingFrame")
 local UIList = Instance.new("UIListLayout")
 local CloseBtn = Instance.new("TextButton")
 
--- Setup da UI
+-- Setup Inicial
 ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- Botão lateral (Toggle)
+-- Função para arredondar cantos
+local function Round(obj, amount)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, amount or 8)
+    c.Parent = obj
+end
+
+-- Função para adicionar borda neon
+local function AddStroke(obj, color, thickness)
+    local s = Instance.new("UIStroke")
+    s.Color = color
+    s.Thickness = thickness or 2
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Parent = obj
+end
+
+-- ==========================================
+-- 🔘 BOTÃO DE ABRIR (NP TOGGLE)
+-- ==========================================
 ToggleButton.Name = "NP_Toggle"
 ToggleButton.Parent = ScreenGui
-ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 0, 50)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 ToggleButton.Position = UDim2.new(0, 10, 0.5, -22)
-ToggleButton.Size = UDim2.new(0, 60, 0, 45)
-ToggleButton.Text = "MENU"
-ToggleButton.TextColor3 = Color3.new(1, 1, 1)
-ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Size = UDim2.new(0, 55, 0, 55)
+ToggleButton.Text = "NP"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 0, 80)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextSize = 20
 ToggleButton.Visible = false
+Round(ToggleButton, 50)
+AddStroke(ToggleButton, Color3.fromRGB(255, 0, 80), 3)
 
--- Menu Principal
+-- ==========================================
+-- 🖼️ MENU PRINCIPAL
+-- ==========================================
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-MainFrame.BorderSizePixel = 2
-MainFrame.BorderColor3 = Color3.fromRGB(180, 0, 50)
-MainFrame.Size = UDim2.new(0, 240, 0, 300) -- Altura ajustada para 4 botões
-MainFrame.Position = UDim2.new(0.4, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+MainFrame.Size = UDim2.new(0, 260, 0, 350) -- Aumentado para 4 botões
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -175)
 MainFrame.Active = true
 MainFrame.Draggable = true
+Round(MainFrame, 12)
+AddStroke(MainFrame, Color3.fromRGB(40, 40, 40), 2)
 
--- Título
+-- Gradiente no fundo
+local MainGradient = Instance.new("UIGradient")
+MainGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 15)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 10, 15))
+})
+MainGradient.Rotation = 45
+MainGradient.Parent = MainFrame
+
+-- Título Premium
 Title.Parent = MainFrame
-Title.Size = UDim2.new(0.8, 0, 0.15, 0)
-Title.Text = "NOOB PRIME v19.0"
+Title.Size = UDim2.new(1, 0, 0.15, 0)
+Title.Text = "NOOB PRIME HUB"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 16
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
 
--- Botão X
+-- Botão de Fechar Estilizado
 CloseBtn.Parent = MainFrame
-CloseBtn.Size = UDim2.new(0.2, 0, 0.15, 0)
-CloseBtn.Position = UDim2.new(0.8, 0, 0, 0)
-CloseBtn.Text = "X"
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.Text = "×"
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 CloseBtn.TextColor3 = Color3.new(1, 1, 1)
-CloseBtn.BorderSizePixel = 0
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 25
+Round(CloseBtn, 8)
 
--- Container para os botões (Scrolling)
+-- Container de Botões
 Container.Parent = MainFrame
-Container.Size = UDim2.new(1, 0, 0.8, 0)
-Container.Position = UDim2.new(0, 0, 0.18, 0)
+Container.Size = UDim2.new(0.9, 0, 0.75, 0)
+Container.Position = UDim2.new(0.05, 0, 0.2, 0)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 1.5, 0) -- Permite rolar se adicionar mais
-Container.ScrollBarThickness = 5
+Container.CanvasSize = UDim2.new(0, 0, 1.8, 0)
+Container.ScrollBarThickness = 2
 
 UIList.Parent = Container
-UIList.Padding = UDim.new(0, 8)
+UIList.Padding = UDim.new(0, 10)
 UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- Função para criar os botões de Script
+-- ==========================================
+-- 🎨 FUNÇÃO CRIAR BOTÃO LUXURY
+-- ==========================================
 local function CriarScriptBtn(nome, cor, scriptUrl)
     local btn = Instance.new("TextButton")
     btn.Parent = Container
-    btn.Size = UDim2.new(0.9, 0, 0, 40)
+    btn.Size = UDim2.new(1, 0, 0, 45)
     btn.Text = nome
-    btn.BackgroundColor3 = cor
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.SourceSansBold
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.TextColor3 = Color3.fromRGB(230, 230, 230)
+    btn.Font = Enum.Font.GothamMedium
     btn.TextSize = 13
-    
+    btn.AutoButtonColor = false
+    Round(btn, 10)
+    AddStroke(btn, cor, 2)
+
+    -- Efeito de Hover e Clique
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.3), {BackgroundColor3 = cor, TextColor3 = Color3.new(1,1,1)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(30, 30, 30), TextColor3 = Color3.fromRGB(230, 230, 230)}):Play()
+    end)
+
     btn.MouseButton1Click:Connect(function()
-        btn.Text = "CARREGANDO..."
-        task.wait(0.3)
-        local s, err = pcall(function()
-            -- Note o uso do 'true' no HttpGet conforme solicitado
-            loadstring(game:HttpGet(scriptUrl, true))()
-        end)
-        if not s then 
-            btn.Text = "ERRO!" 
-            warn("Erro: " .. tostring(err))
-            task.wait(1) 
-        end
+        btn.Text = "⚡ EXECUTANDO..."
+        task.wait(0.5)
+        pcall(function() loadstring(game:HttpGet(scriptUrl))() end)
         btn.Text = nome
     end)
 end
 
 -- ==========================================
--- LISTA DE SCRIPTS (BOTÕES)
+-- 📜 ADICIONANDO OS SCRIPTS (ATUALIZADO)
 -- ==========================================
 
--- 1. ROUBE
-CriarScriptBtn("ROUBE", Color3.fromRGB(180, 0, 50), "https://raw.githubusercontent.com/Ninja10908/S4/refs/heads/main/Kurdhub")
+CriarScriptBtn("ROUBE", Color3.fromRGB(255, 0, 70), "https://raw.githubusercontent.com/Ninja10908/S4/refs/heads/main/Kurdhub")
+CriarScriptBtn("VIAGEM EMPOEIRADA", Color3.fromRGB(0, 160, 255), "https://raw.githubusercontent.com/BalintTheDevXBack/Games/refs/heads/main/aDustyTrip")
+CriarScriptBtn("MURDER MYSTERY 2", Color3.fromRGB(0, 255, 130), "https://raw.githubusercontent.com/maguizao/Vini.xits/refs/heads/main/NEXUSHUB")
+CriarScriptBtn("99 NOITES NA FLORESTA", Color3.fromRGB(255, 170, 0), "https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua")
 
--- 2. VIAGEM EMPOEIRADA
-CriarScriptBtn("VIAGEM EMPOEIRADA", Color3.fromRGB(0, 100, 180), "https://raw.githubusercontent.com/BalintTheDevXBack/Games/refs/heads/main/aDustyTrip")
-
--- 3. MURDER MYSTERY 2
-CriarScriptBtn("MURDER MYSTERY 2", Color3.fromRGB(0, 150, 70), "https://raw.githubusercontent.com/maguizao/Vini.xits/refs/heads/main/NEXUSHUB")
-
--- 4. 99 NOITES NA FLORESTA
-CriarScriptBtn("99 NOITES NA FLORESTA", Color3.fromRGB(120, 80, 0), "https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/nightsintheforest.lua")
-
--- Lógica de abrir/fechar
+-- Animações de Abrir/Fechar
 CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame:TweenSize(UDim2.new(0,0,0,0), "Out", "Quad", 0.3, true)
+    task.wait(0.3)
     MainFrame.Visible = false
     ToggleButton.Visible = true
 end)
@@ -114,4 +149,5 @@ end)
 ToggleButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = true
     ToggleButton.Visible = false
+    MainFrame:TweenSize(UDim2.new(0, 260, 0, 350), "Out", "Back", 0.4, true)
 end)
