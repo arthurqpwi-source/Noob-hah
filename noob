@@ -1,22 +1,23 @@
--- Noob prime v16.0 - Somente Função Roube
+-- Noob prime v17.0 - Roube & Viagem Empoeirada
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
 local ToggleButton = Instance.new("TextButton")
-local RoubeBtn = Instance.new("TextButton")
+local Container = Instance.new("ScrollingFrame")
+local UIList = Instance.new("UIListLayout")
 local CloseBtn = Instance.new("TextButton")
 
--- Setup da UI (Não reseta ao morrer)
+-- Setup da UI
 ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- Botão Flutuante para abrir o menu
+-- Botão lateral (Toggle)
 ToggleButton.Name = "NP_Toggle"
 ToggleButton.Parent = ScreenGui
 ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 0, 50)
 ToggleButton.Position = UDim2.new(0, 10, 0.5, -22)
 ToggleButton.Size = UDim2.new(0, 60, 0, 45)
-ToggleButton.Text = "ROUBE"
+ToggleButton.Text = "MENU"
 ToggleButton.TextColor3 = Color3.new(1, 1, 1)
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.Visible = false
@@ -26,21 +27,21 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 2
 MainFrame.BorderColor3 = Color3.fromRGB(180, 0, 50)
-MainFrame.Size = UDim2.new(0, 200, 0, 150)
-MainFrame.Position = UDim2.new(0.4, 0, 0.4, 0)
+MainFrame.Size = UDim2.new(0, 220, 0, 200)
+MainFrame.Position = UDim2.new(0.4, 0, 0.35, 0)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
 -- Título
 Title.Parent = MainFrame
-Title.Size = UDim2.new(1, 0, 0.3, 0)
-Title.Text = "NOOB PRIME"
+Title.Size = UDim2.new(0.8, 0, 0.2, 0)
+Title.Text = "NOOB PRIME v17.0"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 18
+Title.TextSize = 16
 
--- Botão Fechar
+-- Botão X
 CloseBtn.Parent = MainFrame
 CloseBtn.Size = UDim2.new(0.2, 0, 0.2, 0)
 CloseBtn.Position = UDim2.new(0.8, 0, 0, 0)
@@ -49,15 +50,49 @@ CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 CloseBtn.TextColor3 = Color3.new(1, 1, 1)
 CloseBtn.BorderSizePixel = 0
 
--- Botão ROUBE (A Função Principal)
-RoubeBtn.Parent = MainFrame
-RoubeBtn.Size = UDim2.new(0.8, 0, 0.4, 0)
-RoubeBtn.Position = UDim2.new(0.1, 0, 0.45, 0)
-RoubeBtn.Text = "EXECUTAR ROUBE"
-RoubeBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 50)
-RoubeBtn.TextColor3 = Color3.new(1, 1, 1)
-RoubeBtn.Font = Enum.Font.SourceSansBold
-RoubeBtn.TextSize = 16
+-- Container para os botões
+Container.Parent = MainFrame
+Container.Size = UDim2.new(1, 0, 0.75, 0)
+Container.Position = UDim2.new(0, 0, 0.25, 0)
+Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0, 0, 2, 0)
+Container.ScrollBarThickness = 4
+
+UIList.Parent = Container
+UIList.Padding = UDim.new(0, 10)
+UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- Função para criar os botões de Script
+local function CriarScriptBtn(nome, cor, scriptUrl)
+    local btn = Instance.new("TextButton")
+    btn.Parent = Container
+    btn.Size = UDim2.new(0.9, 0, 0, 45)
+    btn.Text = nome
+    btn.BackgroundColor3 = cor
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 14
+    
+    btn.MouseButton1Click:Connect(function()
+        btn.Text = "CARREGANDO..."
+        task.wait(0.3)
+        local s, err = pcall(function()
+            loadstring(game:HttpGet(scriptUrl))()
+        end)
+        if not s then btn.Text = "ERRO!" task.wait(1) end
+        btn.Text = nome
+    end)
+end
+
+-- ==========================================
+-- BOTÕES DE EXECUÇÃO
+-- ==========================================
+
+-- Botão ROUBE
+CriarScriptBtn("ROUBE", Color3.fromRGB(180, 0, 50), "https://raw.githubusercontent.com/Ninja10908/S4/refs/heads/main/Kurdhub")
+
+-- Botão VIAGEM EMPOEIRADA
+CriarScriptBtn("VIAGEM EMPOEIRADA", Color3.fromRGB(0, 120, 200), "https://raw.githubusercontent.com/BalintTheDevXBack/Games/refs/heads/main/aDustyTrip")
 
 -- Lógica de abrir e fechar
 CloseBtn.MouseButton1Click:Connect(function()
@@ -68,12 +103,4 @@ end)
 ToggleButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = true
     ToggleButton.Visible = false
-end)
-
--- Execução do Script Externo
-RoubeBtn.MouseButton1Click:Connect(function()
-    RoubeBtn.Text = "CARREGANDO..."
-    task.wait(0.5)
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/Ninja10908/S4/refs/heads/main/Kurdhub"))()
-    RoubeBtn.Text = "EXECUTAR ROUBE"
 end)
