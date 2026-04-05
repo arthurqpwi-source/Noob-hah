@@ -1,4 +1,4 @@
--- Noob prime v17.0 - Roube & Viagem Empoeirada
+-- Noob prime v18.0 - Roube, Viagem Empoeirada & Murder Mystery 2
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
@@ -24,18 +24,18 @@ ToggleButton.Visible = false
 
 -- Menu Principal
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MainFrame.BorderSizePixel = 2
 MainFrame.BorderColor3 = Color3.fromRGB(180, 0, 50)
-MainFrame.Size = UDim2.new(0, 220, 0, 200)
-MainFrame.Position = UDim2.new(0.4, 0, 0.35, 0)
+MainFrame.Size = UDim2.new(0, 230, 0, 260) -- Aumentado para caber o novo botão
+MainFrame.Position = UDim2.new(0.4, 0, 0.3, 0)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
 -- Título
 Title.Parent = MainFrame
 Title.Size = UDim2.new(0.8, 0, 0.2, 0)
-Title.Text = "NOOB PRIME v17.0"
+Title.Text = "NOOB PRIME v18.0"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.SourceSansBold
@@ -43,7 +43,7 @@ Title.TextSize = 16
 
 -- Botão X
 CloseBtn.Parent = MainFrame
-CloseBtn.Size = UDim2.new(0.2, 0, 0.2, 0)
+CloseBtn.Size = UDim2.new(0.2, 0, 0.15, 0)
 CloseBtn.Position = UDim2.new(0.8, 0, 0, 0)
 CloseBtn.Text = "X"
 CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
@@ -52,26 +52,26 @@ CloseBtn.BorderSizePixel = 0
 
 -- Container para os botões
 Container.Parent = MainFrame
-Container.Size = UDim2.new(1, 0, 0.75, 0)
-Container.Position = UDim2.new(0, 0, 0.25, 0)
+Container.Size = UDim2.new(1, 0, 0.8, 0)
+Container.Position = UDim2.new(0, 0, 0.2, 0)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 2, 0)
+Container.CanvasSize = UDim2.new(0, 0, 2.5, 0)
 Container.ScrollBarThickness = 4
 
 UIList.Parent = Container
-UIList.Padding = UDim.new(0, 10)
+UIList.Padding = UDim.new(0, 8)
 UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 -- Função para criar os botões de Script
 local function CriarScriptBtn(nome, cor, scriptUrl)
     local btn = Instance.new("TextButton")
     btn.Parent = Container
-    btn.Size = UDim2.new(0.9, 0, 0, 45)
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
     btn.Text = nome
     btn.BackgroundColor3 = cor
     btn.TextColor3 = Color3.new(1, 1, 1)
     btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 14
+    btn.TextSize = 13
     
     btn.MouseButton1Click:Connect(function()
         btn.Text = "CARREGANDO..."
@@ -79,7 +79,11 @@ local function CriarScriptBtn(nome, cor, scriptUrl)
         local s, err = pcall(function()
             loadstring(game:HttpGet(scriptUrl))()
         end)
-        if not s then btn.Text = "ERRO!" task.wait(1) end
+        if not s then 
+            btn.Text = "ERRO!" 
+            warn("Erro ao carregar script: " .. tostring(err))
+            task.wait(1) 
+        end
         btn.Text = nome
     end)
 end
@@ -92,7 +96,10 @@ end
 CriarScriptBtn("ROUBE", Color3.fromRGB(180, 0, 50), "https://raw.githubusercontent.com/Ninja10908/S4/refs/heads/main/Kurdhub")
 
 -- Botão VIAGEM EMPOEIRADA
-CriarScriptBtn("VIAGEM EMPOEIRADA", Color3.fromRGB(0, 120, 200), "https://raw.githubusercontent.com/BalintTheDevXBack/Games/refs/heads/main/aDustyTrip")
+CriarScriptBtn("VIAGEM EMPOEIRADA", Color3.fromRGB(0, 100, 180), "https://raw.githubusercontent.com/BalintTheDevXBack/Games/refs/heads/main/aDustyTrip")
+
+-- Botão MURDER MYSTERY 2
+CriarScriptBtn("MURDER MYSTERY 2", Color3.fromRGB(0, 150, 70), "https://raw.githubusercontent.com/maguizao/Vini.xits/refs/heads/main/NEXUSHUB")
 
 -- Lógica de abrir e fechar
 CloseBtn.MouseButton1Click:Connect(function()
