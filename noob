@@ -1,4 +1,4 @@
--- Noob prime v18.0 - Roube, Viagem Empoeirada & Murder Mystery 2
+-- Noob prime v19.0 - Roube, Viagem Empoeirada, MM2 & 99 Noites
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
@@ -27,15 +27,15 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MainFrame.BorderSizePixel = 2
 MainFrame.BorderColor3 = Color3.fromRGB(180, 0, 50)
-MainFrame.Size = UDim2.new(0, 230, 0, 260) -- Aumentado para caber o novo botão
+MainFrame.Size = UDim2.new(0, 240, 0, 300) -- Altura ajustada para 4 botões
 MainFrame.Position = UDim2.new(0.4, 0, 0.3, 0)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
 -- Título
 Title.Parent = MainFrame
-Title.Size = UDim2.new(0.8, 0, 0.2, 0)
-Title.Text = "NOOB PRIME v18.0"
+Title.Size = UDim2.new(0.8, 0, 0.15, 0)
+Title.Text = "NOOB PRIME v19.0"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.SourceSansBold
@@ -50,13 +50,13 @@ CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 CloseBtn.TextColor3 = Color3.new(1, 1, 1)
 CloseBtn.BorderSizePixel = 0
 
--- Container para os botões
+-- Container para os botões (Scrolling)
 Container.Parent = MainFrame
 Container.Size = UDim2.new(1, 0, 0.8, 0)
-Container.Position = UDim2.new(0, 0, 0.2, 0)
+Container.Position = UDim2.new(0, 0, 0.18, 0)
 Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 2.5, 0)
-Container.ScrollBarThickness = 4
+Container.CanvasSize = UDim2.new(0, 0, 1.5, 0) -- Permite rolar se adicionar mais
+Container.ScrollBarThickness = 5
 
 UIList.Parent = Container
 UIList.Padding = UDim.new(0, 8)
@@ -77,11 +77,12 @@ local function CriarScriptBtn(nome, cor, scriptUrl)
         btn.Text = "CARREGANDO..."
         task.wait(0.3)
         local s, err = pcall(function()
-            loadstring(game:HttpGet(scriptUrl))()
+            -- Note o uso do 'true' no HttpGet conforme solicitado
+            loadstring(game:HttpGet(scriptUrl, true))()
         end)
         if not s then 
             btn.Text = "ERRO!" 
-            warn("Erro ao carregar script: " .. tostring(err))
+            warn("Erro: " .. tostring(err))
             task.wait(1) 
         end
         btn.Text = nome
@@ -89,19 +90,22 @@ local function CriarScriptBtn(nome, cor, scriptUrl)
 end
 
 -- ==========================================
--- BOTÕES DE EXECUÇÃO
+-- LISTA DE SCRIPTS (BOTÕES)
 -- ==========================================
 
--- Botão ROUBE
+-- 1. ROUBE
 CriarScriptBtn("ROUBE", Color3.fromRGB(180, 0, 50), "https://raw.githubusercontent.com/Ninja10908/S4/refs/heads/main/Kurdhub")
 
--- Botão VIAGEM EMPOEIRADA
+-- 2. VIAGEM EMPOEIRADA
 CriarScriptBtn("VIAGEM EMPOEIRADA", Color3.fromRGB(0, 100, 180), "https://raw.githubusercontent.com/BalintTheDevXBack/Games/refs/heads/main/aDustyTrip")
 
--- Botão MURDER MYSTERY 2
+-- 3. MURDER MYSTERY 2
 CriarScriptBtn("MURDER MYSTERY 2", Color3.fromRGB(0, 150, 70), "https://raw.githubusercontent.com/maguizao/Vini.xits/refs/heads/main/NEXUSHUB")
 
--- Lógica de abrir e fechar
+-- 4. 99 NOITES NA FLORESTA
+CriarScriptBtn("99 NOITES NA FLORESTA", Color3.fromRGB(120, 80, 0), "https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/nightsintheforest.lua")
+
+-- Lógica de abrir/fechar
 CloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
     ToggleButton.Visible = true
