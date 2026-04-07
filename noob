@@ -1,194 +1,176 @@
--- Noob prime v27.0 - Luxury Edition + God Admin (Noclip, Fly, Jump)
+-- Noob prime v29.0 - Design de Vidro e Animações Fluídas
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
 
 local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local AdminFrame = Instance.new("Frame")
-local ToggleButton = Instance.new("TextButton")
-local Container = Instance.new("ScrollingFrame")
-local AdminContainer = Instance.new("ScrollingFrame")
-local CloseBtn = Instance.new("TextButton")
-local AdminCloseBtn = Instance.new("TextButton")
-
--- Variáveis de Estado
-local Noclip = false
-local InfJump = false
-
--- Setup Inicial
+ScreenGui.Name = "NoobPrime_Ultra"
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
-local function Round(obj, amount)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, amount or 8)
-    c.Parent = obj
+-- Funções de Estilo Premium
+local function ApplyDesign(obj, color, transparency)
+    local corner = Instance.new("UICorner", obj)
+    corner.CornerRadius = UDim.new(0, 12)
+    
+    local stroke = Instance.new("UIStroke", obj)
+    stroke.Color = color
+    stroke.Thickness = 2.5
+    stroke.Transparency = 0.5
+    
+    obj.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    obj.BackgroundTransparency = transparency or 0.1
 end
 
-local function AddStroke(obj, color, thickness)
-    local s = Instance.new("UIStroke")
-    s.Color = color
-    s.Thickness = thickness or 2
-    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    s.Parent = obj
+local function PlayTween(obj, info, target)
+    local tween = TweenService:Create(obj, info, target)
+    tween:Play()
+    return tween
 end
 
 -- ==========================================
--- 🔘 INTERFACE (NP TOGGLE & FRAMES)
+-- 🔘 BOTÕES FLUTUANTES (TOGGLES)
 -- ==========================================
-ToggleButton.Name = "NP_Toggle"
-ToggleButton.Parent = ScreenGui
-ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleButton.Position = UDim2.new(0, 10, 0.5, -22)
-ToggleButton.Size = UDim2.new(0, 55, 0, 55)
-ToggleButton.Text = "NP"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 0, 80)
-ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.TextSize = 20
-ToggleButton.Visible = false
-Round(ToggleButton, 50)
-AddStroke(ToggleButton, Color3.fromRGB(255, 0, 80), 3)
-
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-MainFrame.Size = UDim2.new(0, 260, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -190)
-MainFrame.Active = true
-MainFrame.Draggable = true
-Round(MainFrame, 12)
-AddStroke(MainFrame, Color3.fromRGB(40, 40, 40), 2)
-
-AdminFrame.Parent = ScreenGui
-AdminFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-AdminFrame.Size = UDim2.new(0, 240, 0, 350)
-AdminFrame.Position = UDim2.new(0.5, 140, 0.5, -175)
-AdminFrame.Visible = false
-AdminFrame.Active = true
-AdminFrame.Draggable = true
-Round(AdminFrame, 12)
-AddStroke(AdminFrame, Color3.fromRGB(0, 120, 255), 2)
-
--- Botões de Fechar e Títulos (Omitidos para brevidade, mas funcionais no código final)
-local function CriarTitulo(txt, parent, color)
-    local t = Instance.new("TextLabel", parent)
-    t.Size = UDim2.new(1, 0, 0.15, 0)
-    t.Text = txt
-    t.TextColor3 = color
-    t.BackgroundTransparency = 1
-    t.Font = Enum.Font.GothamBold
-    t.TextSize = 16
-    return t
-end
-
-CriarTitulo("NOOB PRIME HUB", MainFrame, Color3.new(1,1,1))
-CriarTitulo("ADMIN EXPERT", AdminFrame, Color3.fromRGB(0, 150, 255))
-
--- Containers
-local function ConfigContainer(c, p)
-    c.Parent = p
-    c.Size = UDim2.new(0.9, 0, 0.8, 0)
-    c.Position = UDim2.new(0.05, 0, 0.18, 0)
-    c.BackgroundTransparency = 1
-    c.CanvasSize = UDim2.new(0, 0, 3, 0)
-    c.ScrollBarThickness = 2
-    local l = Instance.new("UIListLayout", c)
-    l.Padding = UDim.new(0, 8)
-    l.HorizontalAlignment = Enum.HorizontalAlignment.Center
-end
-
-ConfigContainer(Container, MainFrame)
-ConfigContainer(AdminContainer, AdminFrame)
-
--- ==========================================
--- 🎨 FUNÇÃO CRIAR BOTÃO
--- ==========================================
-local function CriarBtn(nome, cor, parentContainer, callback)
-    local btn = Instance.new("TextButton")
-    btn.Parent = parentContainer
-    btn.Size = UDim2.new(1, 0, 0, 35)
-    btn.Text = nome
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.TextColor3 = Color3.fromRGB(230, 230, 230)
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 11
-    Round(btn, 6)
-    AddStroke(btn, cor, 1)
-
-    btn.MouseButton1Click:Connect(callback)
+local function CriarToggle(name, pos, color)
+    local btn = Instance.new("TextButton", ScreenGui)
+    btn.Size = UDim2.new(0, 55, 0, 55)
+    btn.Position = pos
+    btn.Text = name
+    btn.Font = Enum.Font.GothamBold
+    btn.TextColor3 = color
+    btn.TextSize = 12
+    btn.AutoButtonColor = false
+    ApplyDesign(btn, color, 0.2)
+    
+    btn.MouseEnter:Connect(function()
+        PlayTween(btn, TweenInfo.new(0.3), {Size = UDim2.new(0, 65, 0, 65), BackgroundTransparency = 0})
+    end)
+    btn.MouseLeave:Connect(function()
+        PlayTween(btn, TweenInfo.new(0.3), {Size = UDim2.new(0, 55, 0, 55), BackgroundTransparency = 0.2})
+    end)
     return btn
 end
 
--- ==========================================
--- 🛠️ LÓGICA DAS FUNÇÕES EXPERT
--- ==========================================
-
--- Loop do Noclip
-RunService.Stepped:Connect(function()
-    if Noclip then
-        for _, part in pairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-end)
-
--- Pulo Infinito
-game:GetService("UserInputService").JumpRequest:Connect(function()
-    if InfJump then
-        player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
-    end
-end)
+local MainToggle = CriarToggle("MENU", UDim2.new(0, 15, 0.45, 0), Color3.fromRGB(255, 0, 80))
+local AdminToggle = CriarToggle("ADM", UDim2.new(0, 15, 0.55, 0), Color3.fromRGB(0, 150, 255))
+MainToggle.Visible = false
+AdminToggle.Visible = false
 
 -- ==========================================
--- 📜 BOTÕES DO ADMIN
+-- 🖼️ JANELAS COM ANIMAÇÃO DE ENTRADA
+-- ==========================================
+local function CriarJanela(size, pos, color)
+    local frame = Instance.new("Frame", ScreenGui)
+    frame.Size = UDim2.new(0, 0, 0, 0) -- Começa invisível para animar
+    frame.Position = pos
+    frame.ClipsDescendants = true
+    frame.Active = true
+    frame.Draggable = true
+    ApplyDesign(frame, color)
+    
+    local gradient = Instance.new("UIGradient", frame)
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.new(1,1,1)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 150))
+    })
+    gradient.Rotation = 45
+    return frame
+end
+
+local MainFrame = CriarJanela(UDim2.new(0, 260, 0, 380), UDim2.new(0.3, 0, 0.3, 0), Color3.fromRGB(255, 0, 80))
+local AdminFrame = CriarJanela(UDim2.new(0, 240, 0, 350), UDim2.new(0.6, 0, 0.3, 0), Color3.fromRGB(0, 150, 255))
+
+-- Função para abrir com impacto
+local function AbrirJanela(frame, size)
+    frame.Visible = true
+    PlayTween(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = size})
+end
+
+-- ================= ==========================
+-- 🎨 BOTÕES ULTRA ANIMADOS
+-- ==========================================
+local function CriarBotaoPremium(txt, color, parent, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(0.9, 0, 0, 42)
+    btn.Text = txt
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextColor3 = Color3.new(0.9, 0.9, 0.9)
+    btn.TextSize = 13
+    btn.AutoButtonColor = false
+    ApplyDesign(btn, Color3.fromRGB(40, 40, 40), 0.5)
+    
+    -- Efeito de Glow ao passar o mouse
+    btn.MouseEnter:Connect(function()
+        PlayTween(btn.UIStroke, TweenInfo.new(0.3), {Color = color, Thickness = 4})
+        PlayTween(btn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)})
+    end)
+    btn.MouseLeave:Connect(function()
+        PlayTween(btn.UIStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(40, 40, 40), Thickness = 2.5})
+        PlayTween(btn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(15, 15, 15)})
+    end)
+    
+    btn.MouseButton1Click:Connect(function()
+        local circle = Instance.new("Frame", btn) -- Efeito de clique (Ripple)
+        circle.BackgroundColor3 = color
+        circle.Position = UDim2.new(0.5, 0, 0.5, 0)
+        Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+        PlayTween(circle, TweenInfo.new(0.4), {Size = UDim2.new(1, 50, 1, 50), BackgroundTransparency = 1, Position = UDim2.new(-0.25, 0, -0.25, 0)})
+        callback()
+    end)
+end
+
+-- Containers (Scroll)
+local function AddScroll(p)
+    local s = Instance.new("ScrollingFrame", p)
+    s.Size = UDim2.new(1, 0, 0.8, 0)
+    s.Position = UDim2.new(0, 0, 0.2, 0)
+    s.BackgroundTransparency = 1
+    s.ScrollBarThickness = 0
+    local l = Instance.new("UIListLayout", s)
+    l.HorizontalAlignment = "Center"
+    l.Padding = UDim.new(0, 10)
+    return s
+end
+
+local MainScroll = AddScroll(MainFrame)
+local AdminScroll = AddScroll(AdminFrame)
+
+-- ==========================================
+-- 📜 ADICIONANDO CONTEÚDO
 -- ==========================================
 
-CriarBtn("NOCLIP (ON/OFF)", Color3.fromRGB(255, 255, 255), AdminContainer, function()
-    Noclip = not Noclip
-end)
+-- Admin
+CriarBotaoPremium("NOCLIP (ON/OFF)", Color3.new(1,1,1), AdminScroll, function() _G.Noclip = not _G.Noclip end)
+CriarBotaoPremium("FLY (VOAR)", Color3.fromRGB(255, 200, 0), AdminScroll, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.lua"))() end)
+CriarBotaoPremium("VELOCIDADE 100", Color3.fromRGB(0, 150, 255), AdminScroll, function() player.Character.Humanoid.WalkSpeed = 100 end)
 
-CriarBtn("PULO INFINITO (ON/OFF)", Color3.fromRGB(0, 255, 255), AdminContainer, function()
-    InfJump = not InfJump
-end)
+-- Main
+CriarBotaoPremium("ROUBE", Color3.fromRGB(255, 0, 70), MainScroll, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Ninja10908/S4/refs/heads/main/Kurdhub"))() end)
+CriarBotaoPremium("MURDER MYSTERY 2", Color3.fromRGB(150, 0, 255), MainScroll, function() loadstring(game:HttpGet("https://moondiety.com/loader"))() end)
+CriarBotaoPremium("ABRIR ADMIN", Color3.fromRGB(0, 120, 255), MainScroll, function() AbrirJanela(AdminFrame, UDim2.new(0, 240, 0, 350)) end)
 
-CriarBtn("FLY (VOAR)", Color3.fromRGB(255, 200, 0), AdminContainer, function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.lua"))()
-end)
+-- Inicialização
+AbrirJanela(MainFrame, UDim2.new(0, 260, 0, 380))
 
-CriarBtn("VER NOMES (ESP)", Color3.fromRGB(0, 255, 100), AdminContainer, function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/Babyhamsta/RBLX_Scripts/main/Universal/ESP.lua"))()
-end)
+-- Botões de Fechar (X)
+local function AddX(frame, toggle)
+    local x = Instance.new("TextButton", frame)
+    x.Text = "×"
+    x.Size = UDim2.new(0, 30, 0, 30)
+    x.Position = UDim2.new(1, -35, 0, 5)
+    x.BackgroundTransparency = 1
+    x.TextColor3 = Color3.new(1,1,1)
+    x.TextSize = 25
+    x.MouseButton1Click:Connect(function()
+        PlayTween(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0,0,0,0)})
+        task.wait(0.3)
+        frame.Visible = false
+        toggle.Visible = true
+    end)
+end
 
-CriarBtn("VELOCIDADE (100)", Color3.fromRGB(0, 150, 255), AdminContainer, function()
-    player.Character.Humanoid.WalkSpeed = 100
-end)
+AddX(MainFrame, MainToggle)
+AddX(AdminFrame, AdminToggle)
 
-CriarBtn("TELEPORT FRENTE", Color3.fromRGB(200, 200, 200), AdminContainer, function()
-    player.Character.HumanoidRootPart.CFrame *= CFrame.new(0, 0, -20)
-end)
-
-CriarBtn("RESETAR TUDO", Color3.fromRGB(255, 50, 50), AdminContainer, function()
-    Noclip = false
-    InfJump = false
-    player.Character.Humanoid.WalkSpeed = 16
-    player.Character.Humanoid.JumpPower = 50
-end)
-
--- ==========================================
--- 📜 BOTÕES PRINCIPAIS
--- ==========================================
-
-CriarBtn("ROUBE", Color3.fromRGB(255, 0, 70), Container, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Ninja10908/S4/refs/heads/main/Kurdhub"))() end)
-CriarBtn("VIAGEM EMPOEIRADA", Color3.fromRGB(0, 160, 255), Container, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/BalintTheDevXBack/Games/refs/heads/main/aDustyTrip"))() end)
-CriarBtn("MURDER MYSTERY 2", Color3.fromRGB(150, 0, 255), Container, function() loadstring(game:HttpGet("https://moondiety.com/loader"))() end)
-CriarBtn("99 NOITES NA FLORESTA", Color3.fromRGB(255, 170, 0), Container, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua"))() end)
-
-local adminBtn = CriarBtn("NOOB ADMIN", Color3.fromRGB(0, 120, 255), Container, function() AdminFrame.Visible = not AdminFrame.Visible end)
-
--- Funções de fechar (Configuradas para sumir com tudo)
-local function Fechar() MainFrame.Visible = false; AdminFrame.Visible = false; ToggleButton.Visible = true end
-local CloseX = Instance.new("TextButton", MainFrame) CloseX.Text = "X"; CloseX.Size = UDim2.new(0,30,0,30); CloseX.Position = UDim2.new(1,-35,0,5); Round(CloseX, 5); CloseX.MouseButton1Click:Connect(Fechar)
-ToggleButton.MouseButton1Click:Connect(function() MainFrame.Visible = true; ToggleButton.Visible = false end)
+MainToggle.MouseButton1Click:Connect(function() MainToggle.Visible = false AbrirJanela(MainFrame, UDim2.new(0, 260, 0, 380)) end)
+AdminToggle.MouseButton1Click:Connect(function() AdminToggle.Visible = false AbrirJanela(AdminFrame, UDim2.new(0, 240, 0, 350)) end)
