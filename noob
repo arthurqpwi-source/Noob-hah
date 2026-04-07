@@ -1,25 +1,32 @@
--- Noob prime v22.0 - Design Premium + 4 Scripts
+-- Noob prime v27.0 - Luxury Edition + God Admin (Noclip, Fly, Jump)
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
-local Title = Instance.new("TextLabel")
+local AdminFrame = Instance.new("Frame")
 local ToggleButton = Instance.new("TextButton")
 local Container = Instance.new("ScrollingFrame")
-local UIList = Instance.new("UIListLayout")
+local AdminContainer = Instance.new("ScrollingFrame")
 local CloseBtn = Instance.new("TextButton")
+local AdminCloseBtn = Instance.new("TextButton")
+
+-- Variáveis de Estado
+local Noclip = false
+local InfJump = false
 
 -- Setup Inicial
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- Função para arredondar cantos
 local function Round(obj, amount)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, amount or 8)
     c.Parent = obj
 end
 
--- Função para adicionar borda neon
 local function AddStroke(obj, color, thickness)
     local s = Instance.new("UIStroke")
     s.Color = color
@@ -29,7 +36,7 @@ local function AddStroke(obj, color, thickness)
 end
 
 -- ==========================================
--- 🔘 BOTÃO DE ABRIR (NP TOGGLE)
+-- 🔘 INTERFACE (NP TOGGLE & FRAMES)
 -- ==========================================
 ToggleButton.Name = "NP_Toggle"
 ToggleButton.Parent = ScreenGui
@@ -44,110 +51,144 @@ ToggleButton.Visible = false
 Round(ToggleButton, 50)
 AddStroke(ToggleButton, Color3.fromRGB(255, 0, 80), 3)
 
--- ==========================================
--- 🖼️ MENU PRINCIPAL
--- ==========================================
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-MainFrame.Size = UDim2.new(0, 260, 0, 350) -- Aumentado para 4 botões
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 260, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -190)
 MainFrame.Active = true
 MainFrame.Draggable = true
 Round(MainFrame, 12)
 AddStroke(MainFrame, Color3.fromRGB(40, 40, 40), 2)
 
--- Gradiente no fundo
-local MainGradient = Instance.new("UIGradient")
-MainGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 15)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 10, 15))
-})
-MainGradient.Rotation = 45
-MainGradient.Parent = MainFrame
+AdminFrame.Parent = ScreenGui
+AdminFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+AdminFrame.Size = UDim2.new(0, 240, 0, 350)
+AdminFrame.Position = UDim2.new(0.5, 140, 0.5, -175)
+AdminFrame.Visible = false
+AdminFrame.Active = true
+AdminFrame.Draggable = true
+Round(AdminFrame, 12)
+AddStroke(AdminFrame, Color3.fromRGB(0, 120, 255), 2)
 
--- Título Premium
-Title.Parent = MainFrame
-Title.Size = UDim2.new(1, 0, 0.15, 0)
-Title.Text = "NOOB PRIME HUB"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
+-- Botões de Fechar e Títulos (Omitidos para brevidade, mas funcionais no código final)
+local function CriarTitulo(txt, parent, color)
+    local t = Instance.new("TextLabel", parent)
+    t.Size = UDim2.new(1, 0, 0.15, 0)
+    t.Text = txt
+    t.TextColor3 = color
+    t.BackgroundTransparency = 1
+    t.Font = Enum.Font.GothamBold
+    t.TextSize = 16
+    return t
+end
 
--- Botão de Fechar Estilizado
-CloseBtn.Parent = MainFrame
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.Text = "×"
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-CloseBtn.TextColor3 = Color3.new(1, 1, 1)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 25
-Round(CloseBtn, 8)
+CriarTitulo("NOOB PRIME HUB", MainFrame, Color3.new(1,1,1))
+CriarTitulo("ADMIN EXPERT", AdminFrame, Color3.fromRGB(0, 150, 255))
 
--- Container de Botões
-Container.Parent = MainFrame
-Container.Size = UDim2.new(0.9, 0, 0.75, 0)
-Container.Position = UDim2.new(0.05, 0, 0.2, 0)
-Container.BackgroundTransparency = 1
-Container.CanvasSize = UDim2.new(0, 0, 1.8, 0)
-Container.ScrollBarThickness = 2
+-- Containers
+local function ConfigContainer(c, p)
+    c.Parent = p
+    c.Size = UDim2.new(0.9, 0, 0.8, 0)
+    c.Position = UDim2.new(0.05, 0, 0.18, 0)
+    c.BackgroundTransparency = 1
+    c.CanvasSize = UDim2.new(0, 0, 3, 0)
+    c.ScrollBarThickness = 2
+    local l = Instance.new("UIListLayout", c)
+    l.Padding = UDim.new(0, 8)
+    l.HorizontalAlignment = Enum.HorizontalAlignment.Center
+end
 
-UIList.Parent = Container
-UIList.Padding = UDim.new(0, 10)
-UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+ConfigContainer(Container, MainFrame)
+ConfigContainer(AdminContainer, AdminFrame)
 
 -- ==========================================
--- 🎨 FUNÇÃO CRIAR BOTÃO LUXURY
+-- 🎨 FUNÇÃO CRIAR BOTÃO
 -- ==========================================
-local function CriarScriptBtn(nome, cor, scriptUrl)
+local function CriarBtn(nome, cor, parentContainer, callback)
     local btn = Instance.new("TextButton")
-    btn.Parent = Container
-    btn.Size = UDim2.new(1, 0, 0, 45)
+    btn.Parent = parentContainer
+    btn.Size = UDim2.new(1, 0, 0, 35)
     btn.Text = nome
     btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.TextColor3 = Color3.fromRGB(230, 230, 230)
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 13
-    btn.AutoButtonColor = false
-    Round(btn, 10)
-    AddStroke(btn, cor, 2)
+    btn.TextSize = 11
+    Round(btn, 6)
+    AddStroke(btn, cor, 1)
 
-    -- Efeito de Hover e Clique
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.3), {BackgroundColor3 = cor, TextColor3 = Color3.new(1,1,1)}):Play()
-    end)
-    btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(30, 30, 30), TextColor3 = Color3.fromRGB(230, 230, 230)}):Play()
-    end)
-
-    btn.MouseButton1Click:Connect(function()
-        btn.Text = "⚡ EXECUTANDO..."
-        task.wait(0.5)
-        pcall(function() loadstring(game:HttpGet(scriptUrl))() end)
-        btn.Text = nome
-    end)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
 end
 
 -- ==========================================
--- 📜 ADICIONANDO OS SCRIPTS (ATUALIZADO)
+-- 🛠️ LÓGICA DAS FUNÇÕES EXPERT
 -- ==========================================
 
-CriarScriptBtn("ROUBE", Color3.fromRGB(255, 0, 70), "https://raw.githubusercontent.com/Ninja10908/S4/refs/heads/main/Kurdhub")
-CriarScriptBtn("VIAGEM EMPOEIRADA", Color3.fromRGB(0, 160, 255), "https://raw.githubusercontent.com/BalintTheDevXBack/Games/refs/heads/main/aDustyTrip")
-CriarScriptBtn("MURDER MYSTERY 2", Color3.fromRGB(0, 255, 130), "https://raw.githubusercontent.com/maguizao/Vini.xits/refs/heads/main/NEXUSHUB")
-CriarScriptBtn("99 NOITES NA FLORESTA", Color3.fromRGB(255, 170, 0), "https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua")
-
--- Animações de Abrir/Fechar
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame:TweenSize(UDim2.new(0,0,0,0), "Out", "Quad", 0.3, true)
-    task.wait(0.3)
-    MainFrame.Visible = false
-    ToggleButton.Visible = true
+-- Loop do Noclip
+RunService.Stepped:Connect(function()
+    if Noclip then
+        for _, part in pairs(player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
 end)
 
-ToggleButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    ToggleButton.Visible = false
-    MainFrame:TweenSize(UDim2.new(0, 260, 0, 350), "Out", "Back", 0.4, true)
+-- Pulo Infinito
+game:GetService("UserInputService").JumpRequest:Connect(function()
+    if InfJump then
+        player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+    end
 end)
+
+-- ==========================================
+-- 📜 BOTÕES DO ADMIN
+-- ==========================================
+
+CriarBtn("NOCLIP (ON/OFF)", Color3.fromRGB(255, 255, 255), AdminContainer, function()
+    Noclip = not Noclip
+end)
+
+CriarBtn("PULO INFINITO (ON/OFF)", Color3.fromRGB(0, 255, 255), AdminContainer, function()
+    InfJump = not InfJump
+end)
+
+CriarBtn("FLY (VOAR)", Color3.fromRGB(255, 200, 0), AdminContainer, function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.lua"))()
+end)
+
+CriarBtn("VER NOMES (ESP)", Color3.fromRGB(0, 255, 100), AdminContainer, function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Babyhamsta/RBLX_Scripts/main/Universal/ESP.lua"))()
+end)
+
+CriarBtn("VELOCIDADE (100)", Color3.fromRGB(0, 150, 255), AdminContainer, function()
+    player.Character.Humanoid.WalkSpeed = 100
+end)
+
+CriarBtn("TELEPORT FRENTE", Color3.fromRGB(200, 200, 200), AdminContainer, function()
+    player.Character.HumanoidRootPart.CFrame *= CFrame.new(0, 0, -20)
+end)
+
+CriarBtn("RESETAR TUDO", Color3.fromRGB(255, 50, 50), AdminContainer, function()
+    Noclip = false
+    InfJump = false
+    player.Character.Humanoid.WalkSpeed = 16
+    player.Character.Humanoid.JumpPower = 50
+end)
+
+-- ==========================================
+-- 📜 BOTÕES PRINCIPAIS
+-- ==========================================
+
+CriarBtn("ROUBE", Color3.fromRGB(255, 0, 70), Container, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Ninja10908/S4/refs/heads/main/Kurdhub"))() end)
+CriarBtn("VIAGEM EMPOEIRADA", Color3.fromRGB(0, 160, 255), Container, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/BalintTheDevXBack/Games/refs/heads/main/aDustyTrip"))() end)
+CriarBtn("MURDER MYSTERY 2", Color3.fromRGB(150, 0, 255), Container, function() loadstring(game:HttpGet("https://moondiety.com/loader"))() end)
+CriarBtn("99 NOITES NA FLORESTA", Color3.fromRGB(255, 170, 0), Container, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/caomod2077/Script/refs/heads/main/FoxnameHub.lua"))() end)
+
+local adminBtn = CriarBtn("NOOB ADMIN", Color3.fromRGB(0, 120, 255), Container, function() AdminFrame.Visible = not AdminFrame.Visible end)
+
+-- Funções de fechar (Configuradas para sumir com tudo)
+local function Fechar() MainFrame.Visible = false; AdminFrame.Visible = false; ToggleButton.Visible = true end
+local CloseX = Instance.new("TextButton", MainFrame) CloseX.Text = "X"; CloseX.Size = UDim2.new(0,30,0,30); CloseX.Position = UDim2.new(1,-35,0,5); Round(CloseX, 5); CloseX.MouseButton1Click:Connect(Fechar)
+ToggleButton.MouseButton1Click:Connect(function() MainFrame.Visible = true; ToggleButton.Visible = false end)
