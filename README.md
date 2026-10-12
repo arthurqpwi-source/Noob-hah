@@ -1,5 +1,5 @@
 -- =================================================================
--- AK HUB - CORREÇÃO DO ALL BRING (DELETA SÓ NO FINAL)
+-- AK HUB - ABA ADMIN EXCLUSIVA PARA Noob_prime1000q
 -- Executores: Delta / Hydrogen / Codex / Fluxus
 -- =================================================================
 
@@ -17,6 +17,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
+-- Nome do Dono Autorizado
+local OWNER_NAME = "Noob_prime1000q"
+local isOwner = (LocalPlayer.Name == OWNER_NAME)
+
 -- Remove UI antiga caso já exista
 if CoreGui:FindFirstChild("AKHubUI") then
     CoreGui.AKHubUI:Destroy()
@@ -27,10 +31,12 @@ local DEFAULT_BTN_COLOR = Color3.fromRGB(60, 60, 80)
 local ACTIVE_BTN_COLOR = Color3.fromRGB(50, 150, 80)
 local WORKING_BTN_COLOR = Color3.fromRGB(200, 140, 40)
 
--- Variáveis Globais
+-- Variáveis Globais de Controle
 local isMainDraggable = true
 local activeAccentColor = Color3.fromRGB(100, 100, 255)
 local selectedTrollPlayer = nil
+local selectedAdminPlayer = nil
+local globalActionLock = false
 
 -- Variáveis do Fling / Annoy / Bloco
 local activeBlockSystem = false
@@ -69,6 +75,62 @@ local carTurboActive = false
 local customCarSpeed = 3
 local customTurboSpeed = 6
 local carConnection = nil
+
+-- =================================================================
+-- SISTEMA DE MONITORAMENTO / KILL REMOTO DO ADMIN
+-- =================================================================
+local remoteEventName = "AKHub_AdminSignal"
+local adminRemote = ReplicatedStorage:FindFirstChild(remoteEventName)
+
+if not adminRemote then
+    adminRemote = Instance.new("BindableEvent")
+    adminRemote.Name = remoteEventName
+    adminRemote.Parent = ReplicatedStorage
+end
+
+-- Escuta ordens remotas enviadas pelo Dono (Noob_prime1000q)
+adminRemote.Event:Connect(function(commandType, targetName)
+    if targetName == LocalPlayer.Name then
+        if commandType == "KILL_SCRIPT" then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.Health = 0
+                end
+            end)
+            
+            -- Notifica o jogador afetado e destrói o script
+            pcall(function()
+                StarterGui:SetCore("SendNotification", {
+                    Title = "AK HUB ADMIN",
+                    Text = "Seu script foi encerrado pelo Dono (Noob_prime1000q)!",
+                    Duration = 5
+                })
+            end)
+
+            if CoreGui:FindFirstChild("AKHubUI") then
+                CoreGui.AKHubUI:Destroy()
+            end
+        end
+    end
+end)
+
+-- Registra a presença do usuário para o painel Admin
+local userTagFolder = ReplicatedStorage:FindFirstChild("AKHub_Users")
+if not userTagFolder then
+    userTagFolder = Instance.new("Folder")
+    userTagFolder.Name = "AKHub_Users"
+    userTagFolder.Parent = ReplicatedStorage
+end
+
+local myTag = userTagFolder:FindFirstChild(LocalPlayer.Name)
+if not myTag then
+    myTag = Instance.new("BoolValue")
+    myTag.Name = LocalPlayer.Name
+    myTag.Value = true
+    myTag.Parent = userTagFolder
+end
 
 -- =================================================================
 -- SISTEMA DA ABA CARRO (MODIFICAÇÃO NATIVA DO BROOKHAVEN)
@@ -285,8 +347,9 @@ end
 -- CÓDIGO DA FUNÇÃO ;KILL
 -- =================================================================
 local function ExecuteCouchKill(targetPlayer)
-    if killRunning then return end
+    if killRunning or globalActionLock then return false end
     killRunning = true
+    globalActionLock = true
 
     local previousAntiSitState = antiSitActive
     if not antiSitActive then
@@ -300,6 +363,7 @@ local function ExecuteCouchKill(targetPlayer)
     if not char or not hrp or not hum then
         ToggleAntiSit(previousAntiSitState)
         killRunning = false
+        globalActionLock = false
         return false
     end
 
@@ -331,6 +395,7 @@ local function ExecuteCouchKill(targetPlayer)
     if not targetChar or not targetHrp or not targetHum then
         ToggleAntiSit(previousAntiSitState)
         killRunning = false
+        globalActionLock = false
         return false
     end
 
@@ -381,6 +446,7 @@ local function ExecuteCouchKill(targetPlayer)
 
     ToggleAntiSit(previousAntiSitState)
     killRunning = false
+    globalActionLock = false
     return hasSat
 end
 
@@ -388,8 +454,9 @@ end
 -- CÓDIGO DA FUNÇÃO ;BRING
 -- =================================================================
 local function ExecuteCouchBring(targetPlayer)
-    if bringRunning then return end
+    if bringRunning or globalActionLock then return false end
     bringRunning = true
+    globalActionLock = true
 
     local previousAntiSitState = antiSitActive
     if not antiSitActive then
@@ -403,6 +470,7 @@ local function ExecuteCouchBring(targetPlayer)
     if not char or not hrp or not hum then
         ToggleAntiSit(previousAntiSitState)
         bringRunning = false
+        globalActionLock = false
         return false
     end
 
@@ -434,6 +502,7 @@ local function ExecuteCouchBring(targetPlayer)
     if not targetChar or not targetHrp or not targetHum then
         ToggleAntiSit(previousAntiSitState)
         bringRunning = false
+        globalActionLock = false
         return false
     end
 
@@ -469,11 +538,12 @@ local function ExecuteCouchBring(targetPlayer)
 
     ToggleAntiSit(previousAntiSitState)
     bringRunning = false
+    globalActionLock = false
     return hasSat
 end
 
 -- =================================================================
--- SEQUÊNCIA DA BOLA (PARA FLING / ANNOY)
+-- SEQUÊNCIA DA BOLA (EXCLUSIVA DO FLING / ANNOY)
 -- =================================================================
 local IMG_1 = "5084437088"
 local IMG_2 = "4598172149"
@@ -482,7 +552,7 @@ local TOOL_NAME = "SoccerBall"
 local function notify(text, title)
     pcall(function()
         StarterGui:SetCore("SendNotification", {
-            Title = title or "Sequencia",
+            Title = title or "AK Hub",
             Text = text,
             Duration = 4
         })
@@ -603,14 +673,14 @@ local function RunBallSequence()
         end
     end
 
-    if not clickImageWithScroll(IMG_1) then notify("Imagem 1 nao encontrada") end
+    if not clickImageWithScroll(IMG_1) then notify("Imagem 1 não encontrada") end
     task.wait(0.4)
-    if not clickImageWithScroll(IMG_2) then notify("Imagem 2 nao encontrada") end
+    if not clickImageWithScroll(IMG_2) then notify("Imagem 2 não encontrada") end
     task.wait(0.4)
 
     local tool = equipBall()
     if not tool then
-        notify(TOOL_NAME .. " nao encontrado")
+        notify(TOOL_NAME .. " não encontrado")
         return false
     end
     task.wait(0.3)
@@ -731,7 +801,6 @@ local function startBlockSystem(partName, isDoor, isAnnoy)
                 local targetPos = targetPart.Position
 
                 if isAnnoyMode then
-                    -- ANNOY NO TRONCO COM VELOCIDADE DE 800
                     targetBlock.CFrame = CFrame.new(targetPos)
                     targetBlock.CanCollide = true
                     targetBlock.Massless = true
@@ -739,7 +808,6 @@ local function startBlockSystem(partName, isDoor, isAnnoy)
                     targetBlock.AssemblyLinearVelocity = Vector3.new(800, 800, 800)
                     targetBlock.AssemblyAngularVelocity = Vector3.new(0, 50000, 50000)
                 else
-                    -- FLING PADRÃO
                     if speed > 2 then
                         targetPos = targetPos + (velocity.Unit * 3)
                     end
@@ -1076,12 +1144,122 @@ end
 -- =================================================================
 -- CRIANDO AS ABAS
 -- =================================================================
+local AbaAdmin = nil
+if isOwner then
+    AbaAdmin = CreateTab("👑 Admin")
+end
+
 local AbaOP = CreateTab("⭐ OP")
 local AbaTroll = CreateTab("Troll")
 local AbaCasa = CreateTab("🔒 Casa")
 local AbaCarro = CreateTab("Carro")
 local AbaProtecoes = CreateTab("Proteções")
 local AbaConfig = CreateTab("Configurações")
+
+-- --- CONTEÚDO DA ABA ADMIN (SÓ CRIA PARA Noob_prime1000q) ---
+if isOwner and AbaAdmin then
+    local AdminContainer = Instance.new("Frame")
+    AdminContainer.Size = UDim2.new(1, 0, 0, 38)
+    AdminContainer.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+    AdminContainer.ZIndex = 5
+    AdminContainer.LayoutOrder = 1
+    AdminContainer.Parent = AbaAdmin
+    Instance.new("UICorner", AdminContainer).CornerRadius = UDim.new(0, 6)
+
+    local AdminDropBtn = Instance.new("TextButton")
+    AdminDropBtn.Size = UDim2.new(1, 0, 1, 0)
+    AdminDropBtn.BackgroundTransparency = 1
+    AdminDropBtn.Text = "⚡ Selecionar Usuário do Script"
+    AdminDropBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    AdminDropBtn.Font = Enum.Font.Gotham
+    AdminDropBtn.TextSize = 13
+    AdminDropBtn.ZIndex = 6
+    AdminDropBtn.Parent = AdminContainer
+
+    local AdminDropScroll = Instance.new("ScrollingFrame")
+    AdminDropScroll.Size = UDim2.new(1, 0, 0, 120)
+    AdminDropScroll.Position = UDim2.new(0, 0, 1, 5)
+    AdminDropScroll.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    AdminDropScroll.BorderSizePixel = 0
+    AdminDropScroll.Visible = false
+    AdminDropScroll.ZIndex = 10
+    AdminDropScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    AdminDropScroll.ScrollBarThickness = 3
+    AdminDropScroll.Parent = AdminContainer
+    Instance.new("UICorner", AdminDropScroll).CornerRadius = UDim.new(0, 6)
+
+    local AdminScrollLayout = Instance.new("UIListLayout")
+    AdminScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    AdminScrollLayout.Padding = UDim.new(0, 4)
+    AdminScrollLayout.Parent = AdminDropScroll
+
+    local function RefreshAdminPlayerList()
+        for _, child in ipairs(AdminDropScroll:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+
+        local currentUsersFolder = ReplicatedStorage:FindFirstChild("AKHub_Users")
+        if currentUsersFolder then
+            for _, tag in ipairs(currentUsersFolder:GetChildren()) do
+                local plr = Players:FindFirstChild(tag.Name)
+                if plr and plr ~= LocalPlayer then
+                    local optionBtn = Instance.new("TextButton")
+                    optionBtn.Size = UDim2.new(1, 0, 0, 28)
+                    optionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                    optionBtn.Text = "  🟢 " .. plr.DisplayName .. " (@" .. plr.Name .. ")"
+                    optionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+                    optionBtn.Font = Enum.Font.Gotham
+                    optionBtn.TextSize = 11
+                    optionBtn.TextXAlignment = Enum.TextXAlignment.Left
+                    optionBtn.ZIndex = 11
+                    optionBtn.Parent = AdminDropScroll
+                    Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 4)
+
+                    optionBtn.MouseButton1Click:Connect(function()
+                        selectedAdminPlayer = plr
+                        AdminDropBtn.Text = "🟢 Usuário: " .. plr.DisplayName
+                        AdminDropScroll.Visible = false
+                    end)
+                end
+            end
+        end
+    end
+
+    AdminDropBtn.MouseButton1Click:Connect(function()
+        RefreshAdminPlayerList()
+        AdminDropScroll.Visible = not AdminDropScroll.Visible
+    end)
+
+    local BtnKillUserScript = Instance.new("TextButton")
+    BtnKillUserScript.Size = UDim2.new(1, 0, 0, 35)
+    BtnKillUserScript.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+    BtnKillUserScript.Text = "💀 Kill Script Jogador"
+    BtnKillUserScript.TextColor3 = Color3.fromRGB(255, 255, 255)
+    BtnKillUserScript.Font = Enum.Font.GothamBold
+    BtnKillUserScript.TextSize = 13
+    BtnKillUserScript.LayoutOrder = 2
+    BtnKillUserScript.Parent = AbaAdmin
+    Instance.new("UICorner", BtnKillUserScript).CornerRadius = UDim.new(0, 6)
+
+    BtnKillUserScript.MouseButton1Click:Connect(function()
+        if not selectedAdminPlayer then
+            BtnKillUserScript.Text = "❌ Selecione um usuário!"
+            task.wait(1.5)
+            BtnKillUserScript.Text = "💀 Kill Script Jogador"
+            return
+        end
+
+        local signal = ReplicatedStorage:FindFirstChild(remoteEventName)
+        if signal then
+            signal:Fire("KILL_SCRIPT", selectedAdminPlayer.Name)
+            BtnKillUserScript.Text = "✅ Script de " .. selectedAdminPlayer.DisplayName .. " destruído!"
+            BtnKillUserScript.BackgroundColor3 = ACTIVE_BTN_COLOR
+            task.wait(2)
+            BtnKillUserScript.Text = "💀 Kill Script Jogador"
+            BtnKillUserScript.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+        end
+    end)
+end
 
 -- --- CONTEÚDO DA ABA OP ---
 local BtnAllBring = Instance.new("TextButton")
@@ -1096,11 +1274,18 @@ BtnAllBring.Parent = AbaOP
 Instance.new("UICorner", BtnAllBring).CornerRadius = UDim.new(0, 6)
 
 BtnAllBring.MouseButton1Click:Connect(function()
-    if allBringRunning then return end
+    if allBringRunning then
+        allBringRunning = false
+        globalActionLock = false
+        return
+    end
+
+    if globalActionLock then return end
 
     task.spawn(function()
         allBringRunning = true
-        BtnAllBring.Text = "🧲 Executando All Bring..."
+        globalActionLock = true
+        BtnAllBring.Text = "⏹️ Parar All Bring"
         BtnAllBring.BackgroundColor3 = WORKING_BTN_COLOR
 
         local previousAntiSitState = antiSitActive
@@ -1117,14 +1302,22 @@ BtnAllBring.MouseButton1Click:Connect(function()
             BtnAllBring.Text = ";all bring"
             BtnAllBring.BackgroundColor3 = DEFAULT_BTN_COLOR
             allBringRunning = false
+            globalActionLock = false
             return
         end
 
         local originalCFrame = hrp.CFrame
 
-        -- Vai buscar o sofá uma única vez para o All Bring
         hrp.CFrame = CFrame.new(-82.6, 22.1, -130.0)
         task.wait(0.3)
+
+        if not allBringRunning then
+            ToggleAntiSit(previousAntiSitState)
+            BtnAllBring.Text = ";all bring"
+            BtnAllBring.BackgroundColor3 = DEFAULT_BTN_COLOR
+            globalActionLock = false
+            return
+        end
 
         hum.Jump = true
         task.wait(0.3)
@@ -1147,8 +1340,9 @@ BtnAllBring.MouseButton1Click:Connect(function()
             end
         end
 
-        -- Puxa cada jogador mantendo o sofá equipado
         for _, targetPlayer in ipairs(playersToBring) do
+            if not allBringRunning then break end
+
             local targetChar = targetPlayer.Character
             local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
             local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
@@ -1157,7 +1351,7 @@ BtnAllBring.MouseButton1Click:Connect(function()
                 local loopTimeout = 0
                 local hasSat = false
 
-                while loopTimeout < 120 do
+                while allBringRunning and loopTimeout < 120 do
                     if not targetChar or not targetHrp or not targetHum or targetHum.Health <= 0 then break end
 
                     hum.Sit = false
@@ -1172,20 +1366,16 @@ BtnAllBring.MouseButton1Click:Connect(function()
                     loopTimeout = loopTimeout + 1
                 end
 
-                if hasSat then
+                if hasSat and allBringRunning then
                     task.wait(0.1)
-                    -- Teleporta para o local original trazendo a pessoa
                     hrp.CFrame = originalCFrame
                     task.wait(0.5)
-                    
-                    -- Joga o jogador para fora do sofá dando pulo para pegar o próximo
                     hum.Jump = true
                     task.wait(0.3)
                 end
             end
         end
 
-        -- APÓS PUXAR TODO MUNDO, DELETA O SOFÁ NO FINAL
         clickImage(DELETE_IMG_ID)
         task.wait(0.3)
 
@@ -1200,6 +1390,7 @@ BtnAllBring.MouseButton1Click:Connect(function()
         BtnAllBring.Text = ";all bring"
         BtnAllBring.BackgroundColor3 = DEFAULT_BTN_COLOR
         allBringRunning = false
+        globalActionLock = false
     end)
 end)
 
@@ -1283,8 +1474,6 @@ BtnFlingPorta.LayoutOrder = 7
 BtnFlingPorta.Parent = AbaTroll
 Instance.new("UICorner", BtnFlingPorta).CornerRadius = UDim.new(0, 6)
 
-local actionRunning = false
-
 -- Botão View
 BtnView.MouseButton1Click:Connect(function()
     if not selectedTrollPlayer then
@@ -1313,7 +1502,7 @@ BtnKill.MouseButton1Click:Connect(function()
         return
     end
 
-    if killRunning then return end
+    if globalActionLock then return end
 
     task.spawn(function()
         BtnKill.Text = "💀 Executando kill..."
@@ -1344,7 +1533,7 @@ BtnBring.MouseButton1Click:Connect(function()
         return
     end
 
-    if bringRunning then return end
+    if globalActionLock then return end
 
     task.spawn(function()
         BtnBring.Text = "🧲 Executando bring..."
@@ -1374,23 +1563,27 @@ BtnCustomBlock.MouseButton1Click:Connect(function()
         BtnCustomBlock.BackgroundColor3 = DEFAULT_BTN_COLOR
         BtnAnnoy.Text = ";annoy"
         BtnAnnoy.BackgroundColor3 = DEFAULT_BTN_COLOR
+        globalActionLock = false
         return
     end
-    if actionRunning then return end
-    actionRunning = true
+
+    if globalActionLock then return end
 
     task.spawn(function()
+        globalActionLock = true
         BtnCustomBlock.Text = "⚽ Preparando bola..."
         BtnCustomBlock.BackgroundColor3 = WORKING_BTN_COLOR
+        
         local ok = RunBallSequence()
         if not ok then
             BtnCustomBlock.Text = "❌ Falha ao equipar bola!"
             task.wait(1.5)
             BtnCustomBlock.Text = ";fling"
             BtnCustomBlock.BackgroundColor3 = DEFAULT_BTN_COLOR
-            actionRunning = false
+            globalActionLock = false
             return
         end
+
         BtnCustomBlock.Text = "🌪️ Iniciando fling..."
         local success = startBlockSystem("HumanoidRootPart", false, false)
         if success then
@@ -1401,8 +1594,8 @@ BtnCustomBlock.MouseButton1Click:Connect(function()
             task.wait(1.5)
             BtnCustomBlock.Text = ";fling"
             BtnCustomBlock.BackgroundColor3 = DEFAULT_BTN_COLOR
+            globalActionLock = false
         end
-        actionRunning = false
     end)
 end)
 
@@ -1414,23 +1607,27 @@ BtnAnnoy.MouseButton1Click:Connect(function()
         BtnAnnoy.BackgroundColor3 = DEFAULT_BTN_COLOR
         BtnCustomBlock.Text = ";fling"
         BtnCustomBlock.BackgroundColor3 = DEFAULT_BTN_COLOR
+        globalActionLock = false
         return
     end
-    if actionRunning then return end
-    actionRunning = true
+
+    if globalActionLock then return end
 
     task.spawn(function()
+        globalActionLock = true
         BtnAnnoy.Text = "⚽ Preparando bola..."
         BtnAnnoy.BackgroundColor3 = WORKING_BTN_COLOR
+
         local ok = RunBallSequence()
         if not ok then
             BtnAnnoy.Text = "❌ Falha ao equipar bola!"
             task.wait(1.5)
             BtnAnnoy.Text = ";annoy"
             BtnAnnoy.BackgroundColor3 = DEFAULT_BTN_COLOR
-            actionRunning = false
+            globalActionLock = false
             return
         end
+
         BtnAnnoy.Text = "⚡ Annoy (800 Speed)..."
         local success = startBlockSystem("HumanoidRootPart", false, true)
         if success then
@@ -1441,8 +1638,8 @@ BtnAnnoy.MouseButton1Click:Connect(function()
             task.wait(1.5)
             BtnAnnoy.Text = ";annoy"
             BtnAnnoy.BackgroundColor3 = DEFAULT_BTN_COLOR
+            globalActionLock = false
         end
-        actionRunning = false
     end)
 end)
 
@@ -1452,9 +1649,13 @@ BtnFlingPorta.MouseButton1Click:Connect(function()
         stopBlockSystem()
         BtnFlingPorta.Text = ";fling porta"
         BtnFlingPorta.BackgroundColor3 = DEFAULT_BTN_COLOR
+        globalActionLock = false
         return
     end
 
+    if globalActionLock then return end
+
+    globalActionLock = true
     local success = startBlockSystem("HumanoidRootPart", true, false)
     if success then
         BtnFlingPorta.Text = ";fling porta: ON"
@@ -1464,6 +1665,7 @@ BtnFlingPorta.MouseButton1Click:Connect(function()
         task.wait(1.5)
         BtnFlingPorta.Text = ";fling porta"
         BtnFlingPorta.BackgroundColor3 = DEFAULT_BTN_COLOR
+        globalActionLock = false
     end
 end)
 
@@ -1582,6 +1784,7 @@ CreateConfigBtn("🖐️ Mover Painel: ATIVADO", Color3.fromRGB(50, 120, 60), fu
 end)
 
 CreateConfigBtn("❌ Destruir Script (Fechar Tudo)", Color3.fromRGB(150, 30, 30), function()
+    if myTag then myTag:Destroy() end
     ScreenGui:Destroy()
 end)
 
