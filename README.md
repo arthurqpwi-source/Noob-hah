@@ -1,5 +1,5 @@
 -- =================================================================
--- AK HUB - ABA ADMIN EXCLUSIVA PARA Noob_prime1000q
+-- AK HUB - CORREÇÃO DA ABA ADMIN E DETECÇÃO DE USUÁRIOS
 -- Executores: Delta / Hydrogen / Codex / Fluxus
 -- =================================================================
 
@@ -13,6 +13,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local GuiService = game:GetService("GuiService")
 local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -77,21 +78,37 @@ local customTurboSpeed = 6
 local carConnection = nil
 
 -- =================================================================
--- SISTEMA DE MONITORAMENTO / KILL REMOTO DO ADMIN
+-- SISTEMA DE SINCRONIZAÇÃO DO ADMIN (COMUNICAÇÃO CLIENT-SERVIDOR)
 -- =================================================================
-local remoteEventName = "AKHub_AdminSignal"
-local adminRemote = ReplicatedStorage:FindFirstChild(remoteEventName)
+local remoteFolderName = "AKHub_AdminSystem"
+local remoteFolder = ReplicatedStorage:FindFirstChild(remoteFolderName)
 
-if not adminRemote then
-    adminRemote = Instance.new("BindableEvent")
-    adminRemote.Name = remoteEventName
-    adminRemote.Parent = ReplicatedStorage
+if not remoteFolder and pcall(function() return game:GetService("RunService"):IsServer() end) then
+    remoteFolder = Instance.new("Folder")
+    remoteFolder.Name = remoteFolderName
+    remoteFolder.Parent = ReplicatedStorage
 end
 
--- Escuta ordens remotas enviadas pelo Dono (Noob_prime1000q)
-adminRemote.Event:Connect(function(commandType, targetName)
-    if targetName == LocalPlayer.Name then
-        if commandType == "KILL_SCRIPT" then
+-- Tenta obter os Remotes criados no servidor ou aguarda estarem disponíveis
+local registerRemote = ReplicatedStorage:WaitForChild(remoteFolderName, 2) and ReplicatedStorage[remoteFolderName]:FindFirstChild("RegisterUser")
+local adminActionRemote = ReplicatedStorage:WaitForChild(remoteFolderName, 2) and ReplicatedStorage[remoteFolderName]:FindFirstChild("AdminAction")
+
+-- Se você for o Dono, garante que o script avisa a todos que você está rodando
+task.spawn(function()
+    while true do
+        pcall(function()
+            if registerRemote then
+                registerRemote:FireServer()
+            end
+        end)
+        task.wait(5)
+    end
+end)
+
+-- Escuta ordens do Dono (Kill Script)
+if adminActionRemote then
+    adminActionRemote.OnClientEvent:Connect(function(commandType, targetName)
+        if targetName == LocalPlayer.Name and commandType == "KILL_SCRIPT" then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -100,11 +117,10 @@ adminRemote.Event:Connect(function(commandType, targetName)
                 end
             end)
             
-            -- Notifica o jogador afetado e destrói o script
             pcall(function()
                 StarterGui:SetCore("SendNotification", {
                     Title = "AK HUB ADMIN",
-                    Text = "Seu script foi encerrado pelo Dono (Noob_prime1000q)!",
+                    Text = "Seu script foi encerrado pelo Dono!",
                     Duration = 5
                 })
             end)
@@ -113,23 +129,7 @@ adminRemote.Event:Connect(function(commandType, targetName)
                 CoreGui.AKHubUI:Destroy()
             end
         end
-    end
-end)
-
--- Registra a presença do usuário para o painel Admin
-local userTagFolder = ReplicatedStorage:FindFirstChild("AKHub_Users")
-if not userTagFolder then
-    userTagFolder = Instance.new("Folder")
-    userTagFolder.Name = "AKHub_Users"
-    userTagFolder.Parent = ReplicatedStorage
-end
-
-local myTag = userTagFolder:FindFirstChild(LocalPlayer.Name)
-if not myTag then
-    myTag = Instance.new("BoolValue")
-    myTag.Name = LocalPlayer.Name
-    myTag.Value = true
-    myTag.Parent = userTagFolder
+    end)
 end
 
 -- =================================================================
@@ -1198,28 +1198,36 @@ if isOwner and AbaAdmin then
             if child:IsA("TextButton") then child:Destroy() end
         end
 
-        local currentUsersFolder = ReplicatedStorage:FindFirstChild("AKHub_Users")
-        if currentUsersFolder then
-            for _, tag in ipairs(currentUsersFolder:GetChildren()) do
-                local plr = Players:FindFirstChild(tag.Name)
-                if plr and plr ~= LocalPlayer then
-                    local optionBtn = Instance.new("TextButton")
-                    optionBtn.Size = UDim2.new(1, 0, 0, 28)
-                    optionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-                    optionBtn.Text = "  🟢 " .. plr.DisplayName .. " (@" .. plr.Name .. ")"
-                    optionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-                    optionBtn.Font = Enum.Font.Gotham
-                    optionBtn.TextSize = 11
-                    optionBtn.TextXAlignment = Enum.TextXAlignment.Left
-                    optionBtn.ZIndex = 11
-                    optionBtn.Parent = AdminDropScroll
-                    Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 4)
+        local currentFolder = ReplicatedStorage:FindFirstChild(remoteFolderName)
+        local activeUsersVal = currentFolder and currentFolder:FindFirstChild("ActiveUsers")
+        
+        if activeUsersVal then
+            local success, activeUsersTable = pcall(function()
+                return HttpService:JSONDecode(activeUsersVal.Value)
+            end)
 
-                    optionBtn.MouseButton1Click:Connect(function()
-                        selectedAdminPlayer = plr
-                        AdminDropBtn.Text = "🟢 Usuário: " .. plr.DisplayName
-                        AdminDropScroll.Visible = false
-                    end)
+            if success and type(activeUsersTable) == "table" then
+                for _, username in ipairs(activeUsersTable) do
+                    local plr = Players:FindFirstChild(username)
+                    if plr then
+                        local optionBtn = Instance.new("TextButton")
+                        optionBtn.Size = UDim2.new(1, 0, 0, 28)
+                        optionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                        optionBtn.Text = "  🟢 " .. plr.DisplayName .. " (@" .. plr.Name .. ")"
+                        optionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+                        optionBtn.Font = Enum.Font.Gotham
+                        optionBtn.TextSize = 11
+                        optionBtn.TextXAlignment = Enum.TextXAlignment.Left
+                        optionBtn.ZIndex = 11
+                        optionBtn.Parent = AdminDropScroll
+                        Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 4)
+
+                        optionBtn.MouseButton1Click:Connect(function()
+                            selectedAdminPlayer = plr
+                            AdminDropBtn.Text = "🟢 Usuário: " .. plr.DisplayName
+                            AdminDropScroll.Visible = false
+                        end)
+                    end
                 end
             end
         end
@@ -1249,9 +1257,10 @@ if isOwner and AbaAdmin then
             return
         end
 
-        local signal = ReplicatedStorage:FindFirstChild(remoteEventName)
-        if signal then
-            signal:Fire("KILL_SCRIPT", selectedAdminPlayer.Name)
+        local currentFolder = ReplicatedStorage:FindFirstChild(remoteFolderName)
+        local actionRem = currentFolder and currentFolder:FindFirstChild("AdminAction")
+        if actionRem then
+            actionRem:FireServer("KILL_SCRIPT", selectedAdminPlayer.Name)
             BtnKillUserScript.Text = "✅ Script de " .. selectedAdminPlayer.DisplayName .. " destruído!"
             BtnKillUserScript.BackgroundColor3 = ACTIVE_BTN_COLOR
             task.wait(2)
@@ -1737,7 +1746,7 @@ local function CreateProtecaoToggle(text, callback)
     btn.Parent = AbaProtecoes
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
-    local active = false
+    val = active
     btn.MouseButton1Click:Connect(function()
         active = not active
         callback(active, btn)
@@ -1751,10 +1760,36 @@ local function CreateProtecaoToggle(text, callback)
     end)
 end
 
-CreateProtecaoToggle("🛡️ Anti Fling", function(state) ToggleAntiFling(state) end)
-CreateProtecaoToggle("🛡️ Anti Kick", function(state) ToggleAntiKick(state) end)
-CreateProtecaoToggle("🛡️ Anti Void", function(state) ToggleAntiVoid(state) end)
-CreateProtecaoToggle("🛡️ Anti Senta", function(state) ToggleAntiSit(state) end)
+-- Ajuste simplificado e direto para Proteções
+local function CreateProtecaoToggleSimple(text, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.BackgroundColor3 = DEFAULT_BTN_COLOR
+    btn.Text = text .. ": OFF"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.Parent = AbaProtecoes
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    local stateVal = false
+    btn.MouseButton1Click:Connect(function()
+        stateVal = not stateVal
+        callback(stateVal, btn)
+        if stateVal then
+            btn.Text = text .. ": ON"
+            btn.BackgroundColor3 = ACTIVE_BTN_COLOR
+        else
+            btn.Text = text .. ": OFF"
+            btn.BackgroundColor3 = DEFAULT_BTN_COLOR
+        end
+    end)
+end
+
+CreateProtecaoToggleSimple("🛡️ Anti Fling", function(state) ToggleAntiFling(state) end)
+CreateProtecaoToggleSimple("🛡️ Anti Kick", function(state) ToggleAntiKick(state) end)
+CreateProtecaoToggleSimple("🛡️ Anti Void", function(state) ToggleAntiVoid(state) end)
+CreateProtecaoToggleSimple("🛡️ Anti Senta", function(state) ToggleAntiSit(state) end)
 
 -- --- ABA CONFIGURAÇÕES ---
 local function CreateConfigBtn(text, color, callback)
@@ -1773,7 +1808,7 @@ local function CreateConfigBtn(text, color, callback)
 end
 
 CreateConfigBtn("🖐️ Mover Painel: ATIVADO", Color3.fromRGB(50, 120, 60), function(btn)
-    isMainDraggable = not isMainDraggable
+    isMainDraggable = not istDraggable or not isMainDraggable
     if isMainDraggable then
         btn.Text = "🖐️ Mover Painel: ATIVADO"
         btn.BackgroundColor3 = Color3.fromRGB(50, 120, 60)
@@ -1784,7 +1819,6 @@ CreateConfigBtn("🖐️ Mover Painel: ATIVADO", Color3.fromRGB(50, 120, 60), fu
 end)
 
 CreateConfigBtn("❌ Destruir Script (Fechar Tudo)", Color3.fromRGB(150, 30, 30), function()
-    if myTag then myTag:Destroy() end
     ScreenGui:Destroy()
 end)
 
