@@ -1,5 +1,5 @@
 -- =================================================================
--- AK HUB - CORREÇÃO DO ALL BRING (DELETA SÓ NO FINAL)
+-- AK HUB - COMPLETO (MOVER PAINEL E TURBO CORRIGIDOS)
 -- Executores: Delta / Hydrogen / Codex / Fluxus
 -- =================================================================
 
@@ -71,7 +71,7 @@ local customTurboSpeed = 6
 local carConnection = nil
 
 -- =================================================================
--- SISTEMA DA ABA CARRO (MODIFICAÇÃO NATIVA DO BROOKHAVEN)
+-- SISTEMA DA ABA CARRO (MODIFICAÇÃO NATIVA DO BROOKHAVEN + TURBO)
 -- =================================================================
 local function ApplyBrookhavenVehicleMods()
     local char = LocalPlayer.Character
@@ -81,12 +81,18 @@ local function ApplyBrookhavenVehicleMods()
         local seat = hum.SeatPart
         local carModel = seat:FindFirstAncestorOfClass("Model")
         
-        local finalMult = carTurboActive and customTurboSpeed or customCarSpeed
-        local targetMaxSpeed = math.clamp(70 * finalMult, 50, 500)
+        -- Calcula o multiplicador combinando velocidade normal e turbo
+        local speedMult = carSpeedActive and customCarSpeed or 1
+        if carTurboActive then
+            speedMult = speedMult * customTurboSpeed
+        end
+        
+        local targetMaxSpeed = math.clamp(70 * speedMult, 50, 800)
 
         pcall(function()
             seat.MaxSpeed = targetMaxSpeed
-            seat.Torque = 100 * finalMult
+            seat.Torque = 200 * speedMult
+            seat.TurnSpeed = 50
         end)
 
         if carModel then
@@ -100,31 +106,35 @@ local function ApplyBrookhavenVehicleMods()
             end
         end
 
-        if seat.ThrottleFloat ~= 0 then
+        -- Impulso contínuo para garantir que o carro dispare com o Turbo ligado
+        if seat.ThrottleFloat ~= 0 or carTurboActive then
             local currentVel = seat.AssemblyLinearVelocity
-            local flatDirection = Vector3.new(seat.CFrame.LookVector.X, 0, seat.CFrame.LookVector.Z).Unit
+            local lookVector = seat.CFrame.LookVector
+            local flatDirection = Vector3.new(lookVector.X, 0, lookVector.Z).Unit
             
-            if math.abs(currentVel.Y) < 6 then
-                seat.AssemblyLinearVelocity = Vector3.new(
-                    flatDirection.X * (targetMaxSpeed * seat.ThrottleFloat),
-                    currentVel.Y,
-                    flatDirection.Z * (targetMaxSpeed * seat.ThrottleFloat)
-                )
-            end
+            local activeSpeed = (seat.ThrottleFloat ~= 0) and (targetMaxSpeed * seat.ThrottleFloat) or targetMaxSpeed
+            
+            seat.AssemblyLinearVelocity = Vector3.new(
+                flatDirection.X * activeSpeed,
+                math.clamp(currentVel.Y, -10, 10),
+                flatDirection.Z * activeSpeed
+            )
         end
     end
 end
 
 local function ToggleCarSpeed(state)
     carSpeedActive = state
-    if carSpeedActive then
-        carConnection = RunService.RenderStepped:Connect(function()
-            if carSpeedActive then
-                ApplyBrookhavenVehicleMods()
-            end
-        end)
+    if carSpeedActive or carTurboActive then
+        if not carConnection then
+            carConnection = RunService.RenderStepped:Connect(function()
+                if carSpeedActive or carTurboActive then
+                    ApplyBrookhavenVehicleMods()
+                end
+            end)
+        end
     else
-        if carConnection then
+        if not carTurboActive and carConnection then
             carConnection:Disconnect()
             carConnection = nil
         end
@@ -140,6 +150,20 @@ end
 
 local function ToggleCarTurbo(state)
     carTurboActive = state
+    if carTurboActive or carSpeedActive then
+        if not carConnection then
+            carConnection = RunService.RenderStepped:Connect(function()
+                if carSpeedActive or carTurboActive then
+                    ApplyBrookhavenVehicleMods()
+                end
+            end)
+        end
+    else
+        if not carSpeedActive and carConnection then
+            carConnection:Disconnect()
+            carConnection = nil
+        end
+    end
 end
 
 -- =================================================================
@@ -731,7 +755,6 @@ local function startBlockSystem(partName, isDoor, isAnnoy)
                 local targetPos = targetPart.Position
 
                 if isAnnoyMode then
-                    -- ANNOY NO TRONCO COM VELOCIDADE DE 800
                     targetBlock.CFrame = CFrame.new(targetPos)
                     targetBlock.CanCollide = true
                     targetBlock.Massless = true
@@ -739,7 +762,6 @@ local function startBlockSystem(partName, isDoor, isAnnoy)
                     targetBlock.AssemblyLinearVelocity = Vector3.new(800, 800, 800)
                     targetBlock.AssemblyAngularVelocity = Vector3.new(0, 50000, 50000)
                 else
-                    -- FLING PADRÃO
                     if speed > 2 then
                         targetPos = targetPos + (velocity.Unit * 3)
                     end
@@ -868,6 +890,43 @@ TitleLabel.TextSize = 16
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Active = true
 TitleLabel.Parent = MainFrame
+
+-- =================================================================
+-- SISTEMA DE ARRASTAR O PAINEL CORRIGIDO
+-- =================================================================
+local draggingMain, dragInputMain, dragStartMain, startPosMain
+
+TitleLabel.InputBegan:Connect(function(input)
+    if isMainDraggable and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        draggingMain = true
+        dragStartMain = input.Position
+        startPosMain = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingMain = false
+            end
+        end)
+    end
+end)
+
+TitleLabel.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInputMain = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if isMainDraggable and input == dragInputMain and draggingMain then
+        local delta = input.Position - dragStartMain
+        MainFrame.Position = UDim2.new(
+            startPosMain.X.Scale, 
+            startPosMain.X.Offset + delta.X, 
+            startPosMain.Y.Scale, 
+            startPosMain.Y.Offset + delta.Y
+        )
+    end
+end)
 
 local isOpen = false
 local originalSize = UDim2.new(0, 450, 0, 300)
@@ -1122,7 +1181,6 @@ BtnAllBring.MouseButton1Click:Connect(function()
 
         local originalCFrame = hrp.CFrame
 
-        -- Vai buscar o sofá uma única vez para o All Bring
         hrp.CFrame = CFrame.new(-82.6, 22.1, -130.0)
         task.wait(0.3)
 
@@ -1147,7 +1205,6 @@ BtnAllBring.MouseButton1Click:Connect(function()
             end
         end
 
-        -- Puxa cada jogador mantendo o sofá equipado
         for _, targetPlayer in ipairs(playersToBring) do
             local targetChar = targetPlayer.Character
             local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
@@ -1174,18 +1231,15 @@ BtnAllBring.MouseButton1Click:Connect(function()
 
                 if hasSat then
                     task.wait(0.1)
-                    -- Teleporta para o local original trazendo a pessoa
                     hrp.CFrame = originalCFrame
                     task.wait(0.5)
                     
-                    -- Joga o jogador para fora do sofá dando pulo para pegar o próximo
                     hum.Jump = true
                     task.wait(0.3)
                 end
             end
         end
 
-        -- APÓS PUXAR TODO MUNDO, DELETA O SOFÁ NO FINAL
         clickImage(DELETE_IMG_ID)
         task.wait(0.3)
 
@@ -1285,7 +1339,6 @@ Instance.new("UICorner", BtnFlingPorta).CornerRadius = UDim.new(0, 6)
 
 local actionRunning = false
 
--- Botão View
 BtnView.MouseButton1Click:Connect(function()
     if not selectedTrollPlayer then
         BtnView.Text = "❌ Selecione um jogador!"
@@ -1304,7 +1357,6 @@ BtnView.MouseButton1Click:Connect(function()
     end
 end)
 
--- Botão Kill
 BtnKill.MouseButton1Click:Connect(function()
     if not selectedTrollPlayer then
         BtnKill.Text = "❌ Selecione um jogador!"
@@ -1335,7 +1387,6 @@ BtnKill.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Botão Bring
 BtnBring.MouseButton1Click:Connect(function()
     if not selectedTrollPlayer then
         BtnBring.Text = "❌ Selecione um jogador!"
@@ -1366,7 +1417,6 @@ BtnBring.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Botão Fling
 BtnCustomBlock.MouseButton1Click:Connect(function()
     if activeBlockSystem then
         stopBlockSystem()
@@ -1406,7 +1456,6 @@ BtnCustomBlock.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Botão Annoy
 BtnAnnoy.MouseButton1Click:Connect(function()
     if activeBlockSystem then
         stopBlockSystem()
@@ -1446,7 +1495,6 @@ BtnAnnoy.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Botão Fling Porta
 BtnFlingPorta.MouseButton1Click:Connect(function()
     if activeBlockSystem then
         stopBlockSystem()
