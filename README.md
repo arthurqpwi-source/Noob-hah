@@ -1,5 +1,5 @@
 -- =================================================================
--- AK HUB - DETECÇÃO REAL DE USUÁRIOS (VARREDURA DE GUI)
+-- AK HUB - ABA ADMIN FUNCIONAL PARA Noob_prime1000q
 -- Executores: Delta / Hydrogen / Codex / Fluxus
 -- =================================================================
 
@@ -75,27 +75,6 @@ local carTurboActive = false
 local customCarSpeed = 3
 local customTurboSpeed = 6
 local carConnection = nil
-
--- =================================================================
--- SISTEMA DE DETECÇÃO POR PRESENÇA NO WORKSPACE (MARCADOR)
--- =================================================================
--- Para contornar o acoplamento do servidor, criamos uma marcação no personagem
-local function RegisterMyPresence()
-    task.spawn(function()
-        while task.wait(3) do
-            pcall(function()
-                local char = LocalPlayer.Character
-                if char and not char:FindFirstChild("AKHub_ActiveUser") then
-                    local tag = Instance.new("StringValue")
-                    tag.Name = "AKHub_ActiveUser"
-                    tag.Value = LocalPlayer.Name
-                    tag.Parent = char
-                end
-            end)
-        end
-    end)
-end
-RegisterMyPresence()
 
 -- =================================================================
 -- SISTEMA DA ABA CARRO (MODIFICAÇÃO NATIVA DO BROOKHAVEN)
@@ -1072,7 +1051,7 @@ local AbaCarro = CreateTab("Carro")
 local AbaProtecoes = CreateTab("Proteções")
 local AbaConfig = CreateTab("Configurações")
 
--- --- CONTEÚDO DA ABA ADMIN (VARREDURA POR MARCADOR NO PERSONAGEM) ---
+-- --- CONTEÚDO DA ABA ADMIN ---
 if isOwner and AbaAdmin then
     local AdminContainer = Instance.new("Frame")
     AdminContainer.Size = UDim2.new(1, 0, 0, 38)
@@ -1085,7 +1064,7 @@ if isOwner and AbaAdmin then
     local AdminDropBtn = Instance.new("TextButton")
     AdminDropBtn.Size = UDim2.new(1, 0, 1, 0)
     AdminDropBtn.BackgroundTransparency = 1
-    AdminDropBtn.Text = "⚡ Selecionar Usuário do Script"
+    AdminDropBtn.Text = "⚡ Selecionar Jogador Alvo"
     AdminDropBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     AdminDropBtn.Font = Enum.Font.Gotham
     AdminDropBtn.TextSize = 13
@@ -1114,36 +1093,26 @@ if isOwner and AbaAdmin then
             if child:IsA("TextButton") then child:Destroy() end
         end
 
-        local count = 0
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer then
-                local char = plr.Character
-                -- Verifica se o marcador AKHub_ActiveUser existe no personagem dele
-                if char and char:FindFirstChild("AKHub_ActiveUser") then
-                    count = count + 1
-                    local optionBtn = Instance.new("TextButton")
-                    optionBtn.Size = UDim2.new(1, 0, 0, 28)
-                    optionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-                    optionBtn.Text = "  🟢 " .. plr.DisplayName .. " (@" .. plr.Name .. ")"
-                    optionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-                    optionBtn.Font = Enum.Font.Gotham
-                    optionBtn.TextSize = 11
-                    optionBtn.TextXAlignment = Enum.TextXAlignment.Left
-                    optionBtn.ZIndex = 11
-                    optionBtn.Parent = AdminDropScroll
-                    Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 4)
+                local optionBtn = Instance.new("TextButton")
+                optionBtn.Size = UDim2.new(1, 0, 0, 28)
+                optionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                optionBtn.Text = "  👤 " .. plr.DisplayName .. " (@" .. plr.Name .. ")"
+                optionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+                optionBtn.Font = Enum.Font.Gotham
+                optionBtn.TextSize = 11
+                optionBtn.TextXAlignment = Enum.TextXAlignment.Left
+                optionBtn.ZIndex = 11
+                optionBtn.Parent = AdminDropScroll
+                Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 4)
 
-                    optionBtn.MouseButton1Click:Connect(function()
-                        selectedAdminPlayer = plr
-                        AdminDropBtn.Text = "🟢 Usuário: " .. plr.DisplayName
-                        AdminDropScroll.Visible = false
-                    end)
-                end
+                optionBtn.MouseButton1Click:Connect(function()
+                    selectedAdminPlayer = plr
+                    AdminDropBtn.Text = "🎯 Alvo: " .. plr.DisplayName
+                    AdminDropScroll.Visible = false
+                end)
             end
-        end
-
-        if count == 0 then
-            AdminDropBtn.Text = "❌ Nenhum usuário detectado"
         end
     end
 
@@ -1165,24 +1134,27 @@ if isOwner and AbaAdmin then
 
     BtnKillUserScript.MouseButton1Click:Connect(function()
         if not selectedAdminPlayer then
-            BtnKillUserScript.Text = "❌ Selecione um usuário!"
+            BtnKillUserScript.Text = "❌ Selecione um jogador!"
             task.wait(1.5)
             BtnKillUserScript.Text = "💀 Kill Script Jogador"
             return
         end
 
-        -- Executa a rotina CouchKill diretamente no jogador detectado
         task.spawn(function()
-            BtnKillUserScript.Text = "⚡ Encerrando " .. selectedAdminPlayer.DisplayName .. "..."
+            BtnKillUserScript.Text = "⚡ Destruindo script de " .. selectedAdminPlayer.DisplayName .. "..."
             BtnKillUserScript.BackgroundColor3 = WORKING_BTN_COLOR
+
+            -- Tenta forçar a eliminação e queda do script
             local ok = ExecuteCouchKill(selectedAdminPlayer)
+
             if ok then
-                BtnKillUserScript.Text = "✅ Jogador eliminado com sucesso!"
+                BtnKillUserScript.Text = "✅ Jogador eliminado!"
                 BtnKillUserScript.BackgroundColor3 = ACTIVE_BTN_COLOR
             else
-                BtnKillUserScript.Text = "❌ Falha ao eliminar jogador!"
+                BtnKillUserScript.Text = "❌ Falha ao eliminar!"
                 BtnKillUserScript.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
             end
+
             task.wait(2)
             BtnKillUserScript.Text = "💀 Kill Script Jogador"
             BtnKillUserScript.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
