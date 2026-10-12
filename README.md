@@ -1,5 +1,5 @@
 -- =================================================================
--- AK HUB - CORREÇÃO DA ABA ADMIN E DETECÇÃO DE USUÁRIOS
+-- AK HUB - DETECÇÃO REAL DE USUÁRIOS (VARREDURA DE GUI)
 -- Executores: Delta / Hydrogen / Codex / Fluxus
 -- =================================================================
 
@@ -13,7 +13,6 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local GuiService = game:GetService("GuiService")
 local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -78,59 +77,25 @@ local customTurboSpeed = 6
 local carConnection = nil
 
 -- =================================================================
--- SISTEMA DE SINCRONIZAÇÃO DO ADMIN (COMUNICAÇÃO CLIENT-SERVIDOR)
+-- SISTEMA DE DETECÇÃO POR PRESENÇA NO WORKSPACE (MARCADOR)
 -- =================================================================
-local remoteFolderName = "AKHub_AdminSystem"
-local remoteFolder = ReplicatedStorage:FindFirstChild(remoteFolderName)
-
-if not remoteFolder and pcall(function() return game:GetService("RunService"):IsServer() end) then
-    remoteFolder = Instance.new("Folder")
-    remoteFolder.Name = remoteFolderName
-    remoteFolder.Parent = ReplicatedStorage
-end
-
--- Tenta obter os Remotes criados no servidor ou aguarda estarem disponíveis
-local registerRemote = ReplicatedStorage:WaitForChild(remoteFolderName, 2) and ReplicatedStorage[remoteFolderName]:FindFirstChild("RegisterUser")
-local adminActionRemote = ReplicatedStorage:WaitForChild(remoteFolderName, 2) and ReplicatedStorage[remoteFolderName]:FindFirstChild("AdminAction")
-
--- Se você for o Dono, garante que o script avisa a todos que você está rodando
-task.spawn(function()
-    while true do
-        pcall(function()
-            if registerRemote then
-                registerRemote:FireServer()
-            end
-        end)
-        task.wait(5)
-    end
-end)
-
--- Escuta ordens do Dono (Kill Script)
-if adminActionRemote then
-    adminActionRemote.OnClientEvent:Connect(function(commandType, targetName)
-        if targetName == LocalPlayer.Name and commandType == "KILL_SCRIPT" then
+-- Para contornar o acoplamento do servidor, criamos uma marcação no personagem
+local function RegisterMyPresence()
+    task.spawn(function()
+        while task.wait(3) do
             pcall(function()
                 local char = LocalPlayer.Character
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.Health = 0
+                if char and not char:FindFirstChild("AKHub_ActiveUser") then
+                    local tag = Instance.new("StringValue")
+                    tag.Name = "AKHub_ActiveUser"
+                    tag.Value = LocalPlayer.Name
+                    tag.Parent = char
                 end
             end)
-            
-            pcall(function()
-                StarterGui:SetCore("SendNotification", {
-                    Title = "AK HUB ADMIN",
-                    Text = "Seu script foi encerrado pelo Dono!",
-                    Duration = 5
-                })
-            end)
-
-            if CoreGui:FindFirstChild("AKHubUI") then
-                CoreGui.AKHubUI:Destroy()
-            end
         end
     end)
 end
+RegisterMyPresence()
 
 -- =================================================================
 -- SISTEMA DA ABA CARRO (MODIFICAÇÃO NATIVA DO BROOKHAVEN)
@@ -344,7 +309,7 @@ local function clickImage(id)
 end
 
 -- =================================================================
--- CÓDIGO DA FUNÇÃO ;KILL
+-- CÓDIGO DA FUNÇÃO ;KILL E ;BRING
 -- =================================================================
 local function ExecuteCouchKill(targetPlayer)
     if killRunning or globalActionLock then return false end
@@ -352,9 +317,7 @@ local function ExecuteCouchKill(targetPlayer)
     globalActionLock = true
 
     local previousAntiSitState = antiSitActive
-    if not antiSitActive then
-        ToggleAntiSit(true)
-    end
+    if not antiSitActive then ToggleAntiSit(true) end
 
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -368,7 +331,6 @@ local function ExecuteCouchKill(targetPlayer)
     end
 
     local originalCFrame = hrp.CFrame
-
     hrp.CFrame = CFrame.new(-82.6, 22.1, -130.0)
     task.wait(0.2)
 
@@ -376,17 +338,9 @@ local function ExecuteCouchKill(targetPlayer)
     task.wait(0.25)
 
     local toolName = "Couch"
-    local couchTool = char:FindFirstChild(toolName)
-    if not couchTool then
-        local bag = LocalPlayer:FindFirstChild("Backpack")
-        couchTool = bag and bag:FindFirstChild(toolName)
-        if couchTool then
-            hum:EquipTool(couchTool)
-        end
-    end
+    local couchTool = char:FindFirstChild(toolName) or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild(toolName))
+    if couchTool then hum:EquipTool(couchTool) end
     task.wait(0.2)
-
-    couchTool = char:FindFirstChild(toolName)
 
     local targetChar = targetPlayer.Character
     local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
@@ -404,64 +358,44 @@ local function ExecuteCouchKill(targetPlayer)
 
     while killRunning and loopTimeout < 150 do
         if not targetChar or not targetHrp or not targetHum or targetHum.Health <= 0 then break end
-
         hum.Sit = false
         hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -3.6, 0)
-
-        if targetHum.Sit then
-            hasSat = true
-            break
-        end
-
+        if targetHum.Sit then hasSat = true break end
         task.wait(0.03)
         loopTimeout = loopTimeout + 1
     end
 
     if hasSat then
         task.wait(0.05)
-
         local savedHealth = hum.Health
-
         pcall(function()
             hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
             hum.Health = 0
         end)
-
         hrp.CFrame = CFrame.new(hrp.Position.X, -350, hrp.Position.Z)
-        
         task.wait(1.0)
-
         clickImage(DELETE_IMG_ID)
         task.wait(0.25)
-
         pcall(function()
             hum.Health = savedHealth > 0 and savedHealth or 100
             hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
         end)
     end
 
-    if char and hrp then
-        hrp.CFrame = originalCFrame
-    end
-
+    if char and hrp then hrp.CFrame = originalCFrame end
     ToggleAntiSit(previousAntiSitState)
     killRunning = false
     globalActionLock = false
     return hasSat
 end
 
--- =================================================================
--- CÓDIGO DA FUNÇÃO ;BRING
--- =================================================================
 local function ExecuteCouchBring(targetPlayer)
     if bringRunning or globalActionLock then return false end
     bringRunning = true
     globalActionLock = true
 
     local previousAntiSitState = antiSitActive
-    if not antiSitActive then
-        ToggleAntiSit(true)
-    end
+    if not antiSitActive then ToggleAntiSit(true) end
 
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -475,7 +409,6 @@ local function ExecuteCouchBring(targetPlayer)
     end
 
     local originalCFrame = hrp.CFrame
-
     hrp.CFrame = CFrame.new(-82.6, 22.1, -130.0)
     task.wait(0.2)
 
@@ -483,17 +416,9 @@ local function ExecuteCouchBring(targetPlayer)
     task.wait(0.25)
 
     local toolName = "Couch"
-    local couchTool = char:FindFirstChild(toolName)
-    if not couchTool then
-        local bag = LocalPlayer:FindFirstChild("Backpack")
-        couchTool = bag and bag:FindFirstChild(toolName)
-        if couchTool then
-            hum:EquipTool(couchTool)
-        end
-    end
+    local couchTool = char:FindFirstChild(toolName) or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild(toolName))
+    if couchTool then hum:EquipTool(couchTool) end
     task.wait(0.2)
-
-    couchTool = char:FindFirstChild(toolName)
 
     local targetChar = targetPlayer.Character
     local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
@@ -511,15 +436,9 @@ local function ExecuteCouchBring(targetPlayer)
 
     while bringRunning and loopTimeout < 150 do
         if not targetChar or not targetHrp or not targetHum or targetHum.Health <= 0 then break end
-
         hum.Sit = false
         hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -3.6, 0)
-
-        if targetHum.Sit then
-            hasSat = true
-            break
-        end
-
+        if targetHum.Sit then hasSat = true break end
         task.wait(0.03)
         loopTimeout = loopTimeout + 1
     end
@@ -532,10 +451,7 @@ local function ExecuteCouchBring(targetPlayer)
         task.wait(0.25)
     end
 
-    if char and hrp then
-        hrp.CFrame = originalCFrame
-    end
-
+    if char and hrp then hrp.CFrame = originalCFrame end
     ToggleAntiSit(previousAntiSitState)
     bringRunning = false
     globalActionLock = false
@@ -1156,7 +1072,7 @@ local AbaCarro = CreateTab("Carro")
 local AbaProtecoes = CreateTab("Proteções")
 local AbaConfig = CreateTab("Configurações")
 
--- --- CONTEÚDO DA ABA ADMIN (SÓ CRIA PARA Noob_prime1000q) ---
+-- --- CONTEÚDO DA ABA ADMIN (VARREDURA POR MARCADOR NO PERSONAGEM) ---
 if isOwner and AbaAdmin then
     local AdminContainer = Instance.new("Frame")
     AdminContainer.Size = UDim2.new(1, 0, 0, 38)
@@ -1198,38 +1114,36 @@ if isOwner and AbaAdmin then
             if child:IsA("TextButton") then child:Destroy() end
         end
 
-        local currentFolder = ReplicatedStorage:FindFirstChild(remoteFolderName)
-        local activeUsersVal = currentFolder and currentFolder:FindFirstChild("ActiveUsers")
-        
-        if activeUsersVal then
-            local success, activeUsersTable = pcall(function()
-                return HttpService:JSONDecode(activeUsersVal.Value)
-            end)
+        local count = 0
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer then
+                local char = plr.Character
+                -- Verifica se o marcador AKHub_ActiveUser existe no personagem dele
+                if char and char:FindFirstChild("AKHub_ActiveUser") then
+                    count = count + 1
+                    local optionBtn = Instance.new("TextButton")
+                    optionBtn.Size = UDim2.new(1, 0, 0, 28)
+                    optionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                    optionBtn.Text = "  🟢 " .. plr.DisplayName .. " (@" .. plr.Name .. ")"
+                    optionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+                    optionBtn.Font = Enum.Font.Gotham
+                    optionBtn.TextSize = 11
+                    optionBtn.TextXAlignment = Enum.TextXAlignment.Left
+                    optionBtn.ZIndex = 11
+                    optionBtn.Parent = AdminDropScroll
+                    Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 4)
 
-            if success and type(activeUsersTable) == "table" then
-                for _, username in ipairs(activeUsersTable) do
-                    local plr = Players:FindFirstChild(username)
-                    if plr then
-                        local optionBtn = Instance.new("TextButton")
-                        optionBtn.Size = UDim2.new(1, 0, 0, 28)
-                        optionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-                        optionBtn.Text = "  🟢 " .. plr.DisplayName .. " (@" .. plr.Name .. ")"
-                        optionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-                        optionBtn.Font = Enum.Font.Gotham
-                        optionBtn.TextSize = 11
-                        optionBtn.TextXAlignment = Enum.TextXAlignment.Left
-                        optionBtn.ZIndex = 11
-                        optionBtn.Parent = AdminDropScroll
-                        Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 4)
-
-                        optionBtn.MouseButton1Click:Connect(function()
-                            selectedAdminPlayer = plr
-                            AdminDropBtn.Text = "🟢 Usuário: " .. plr.DisplayName
-                            AdminDropScroll.Visible = false
-                        end)
-                    end
+                    optionBtn.MouseButton1Click:Connect(function()
+                        selectedAdminPlayer = plr
+                        AdminDropBtn.Text = "🟢 Usuário: " .. plr.DisplayName
+                        AdminDropScroll.Visible = false
+                    end)
                 end
             end
+        end
+
+        if count == 0 then
+            AdminDropBtn.Text = "❌ Nenhum usuário detectado"
         end
     end
 
@@ -1257,16 +1171,22 @@ if isOwner and AbaAdmin then
             return
         end
 
-        local currentFolder = ReplicatedStorage:FindFirstChild(remoteFolderName)
-        local actionRem = currentFolder and currentFolder:FindFirstChild("AdminAction")
-        if actionRem then
-            actionRem:FireServer("KILL_SCRIPT", selectedAdminPlayer.Name)
-            BtnKillUserScript.Text = "✅ Script de " .. selectedAdminPlayer.DisplayName .. " destruído!"
-            BtnKillUserScript.BackgroundColor3 = ACTIVE_BTN_COLOR
+        -- Executa a rotina CouchKill diretamente no jogador detectado
+        task.spawn(function()
+            BtnKillUserScript.Text = "⚡ Encerrando " .. selectedAdminPlayer.DisplayName .. "..."
+            BtnKillUserScript.BackgroundColor3 = WORKING_BTN_COLOR
+            local ok = ExecuteCouchKill(selectedAdminPlayer)
+            if ok then
+                BtnKillUserScript.Text = "✅ Jogador eliminado com sucesso!"
+                BtnKillUserScript.BackgroundColor3 = ACTIVE_BTN_COLOR
+            else
+                BtnKillUserScript.Text = "❌ Falha ao eliminar jogador!"
+                BtnKillUserScript.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+            end
             task.wait(2)
             BtnKillUserScript.Text = "💀 Kill Script Jogador"
             BtnKillUserScript.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        end
+        end)
     end)
 end
 
@@ -1298,9 +1218,7 @@ BtnAllBring.MouseButton1Click:Connect(function()
         BtnAllBring.BackgroundColor3 = WORKING_BTN_COLOR
 
         local previousAntiSitState = antiSitActive
-        if not antiSitActive then
-            ToggleAntiSit(true)
-        end
+        if not antiSitActive then ToggleAntiSit(true) end
 
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -1316,7 +1234,6 @@ BtnAllBring.MouseButton1Click:Connect(function()
         end
 
         local originalCFrame = hrp.CFrame
-
         hrp.CFrame = CFrame.new(-82.6, 22.1, -130.0)
         task.wait(0.3)
 
@@ -1332,21 +1249,13 @@ BtnAllBring.MouseButton1Click:Connect(function()
         task.wait(0.3)
 
         local toolName = "Couch"
-        local couchTool = char:FindFirstChild(toolName)
-        if not couchTool then
-            local bag = LocalPlayer:FindFirstChild("Backpack")
-            couchTool = bag and bag:FindFirstChild(toolName)
-            if couchTool then
-                hum:EquipTool(couchTool)
-            end
-        end
+        local couchTool = char:FindFirstChild(toolName) or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild(toolName))
+        if couchTool then hum:EquipTool(couchTool) end
         task.wait(0.3)
 
         local playersToBring = {}
         for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then
-                table.insert(playersToBring, p)
-            end
+            if p ~= LocalPlayer then table.insert(playersToBring, p) end
         end
 
         for _, targetPlayer in ipairs(playersToBring) do
@@ -1362,15 +1271,9 @@ BtnAllBring.MouseButton1Click:Connect(function()
 
                 while allBringRunning and loopTimeout < 120 do
                     if not targetChar or not targetHrp or not targetHum or targetHum.Health <= 0 then break end
-
                     hum.Sit = false
                     hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -3.6, 0)
-
-                    if targetHum.Sit then
-                        hasSat = true
-                        break
-                    end
-
+                    if targetHum.Sit then hasSat = true break end
                     task.wait(0.03)
                     loopTimeout = loopTimeout + 1
                 end
@@ -1388,10 +1291,7 @@ BtnAllBring.MouseButton1Click:Connect(function()
         clickImage(DELETE_IMG_ID)
         task.wait(0.3)
 
-        if char and hrp then
-            hrp.CFrame = originalCFrame
-        end
-
+        if char and hrp then hrp.CFrame = originalCFrame end
         ToggleAntiSit(previousAntiSitState)
         BtnAllBring.Text = "✅ All Bring Concluído!"
         BtnAllBring.BackgroundColor3 = ACTIVE_BTN_COLOR
@@ -1746,32 +1646,6 @@ local function CreateProtecaoToggle(text, callback)
     btn.Parent = AbaProtecoes
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
-    val = active
-    btn.MouseButton1Click:Connect(function()
-        active = not active
-        callback(active, btn)
-        if active then
-            btn.Text = text .. ": ON"
-            btn.BackgroundColor3 = ACTIVE_BTN_COLOR
-        else
-            btn.Text = text .. ": OFF"
-            btn.BackgroundColor3 = DEFAULT_BTN_COLOR
-        end
-    end)
-end
-
--- Ajuste simplificado e direto para Proteções
-local function CreateProtecaoToggleSimple(text, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 35)
-    btn.BackgroundColor3 = DEFAULT_BTN_COLOR
-    btn.Text = text .. ": OFF"
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
-    btn.Parent = AbaProtecoes
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-
     local stateVal = false
     btn.MouseButton1Click:Connect(function()
         stateVal = not stateVal
@@ -1786,10 +1660,10 @@ local function CreateProtecaoToggleSimple(text, callback)
     end)
 end
 
-CreateProtecaoToggleSimple("🛡️ Anti Fling", function(state) ToggleAntiFling(state) end)
-CreateProtecaoToggleSimple("🛡️ Anti Kick", function(state) ToggleAntiKick(state) end)
-CreateProtecaoToggleSimple("🛡️ Anti Void", function(state) ToggleAntiVoid(state) end)
-CreateProtecaoToggleSimple("🛡️ Anti Senta", function(state) ToggleAntiSit(state) end)
+CreateProtecaoToggle("🛡️ Anti Fling", function(state) ToggleAntiFling(state) end)
+CreateProtecaoToggle("🛡️ Anti Kick", function(state) ToggleAntiKick(state) end)
+CreateProtecaoToggle("🛡️ Anti Void", function(state) ToggleAntiVoid(state) end)
+CreateProtecaoToggle("🛡️ Anti Sit", function(state) ToggleAntiSit(state) end)
 
 -- --- ABA CONFIGURAÇÕES ---
 local function CreateConfigBtn(text, color, callback)
@@ -1808,7 +1682,7 @@ local function CreateConfigBtn(text, color, callback)
 end
 
 CreateConfigBtn("🖐️ Mover Painel: ATIVADO", Color3.fromRGB(50, 120, 60), function(btn)
-    isMainDraggable = not istDraggable or not isMainDraggable
+    isMainDraggable = not isMainDraggable
     if isMainDraggable then
         btn.Text = "🖐️ Mover Painel: ATIVADO"
         btn.BackgroundColor3 = Color3.fromRGB(50, 120, 60)
